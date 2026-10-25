@@ -2,6 +2,8 @@
 
 **Estado: ambos bloques autorizados por TARS y Dirección Creativa e implementados en `codex/phase-22-battle-depth`, desde `main` `1c740d6`. No integrados; pendientes de revisión técnica y validación visual del propietario.** Base: Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`. Se mantienen estadísticas, economía y resolución simultánea aprobadas.
 
+**Actualización de cierre:** Dirección Creativa comunicó prueba manual positiva, sin aprobación completa. [Informe final de verificación](PHASE_22_FINAL_REVIEW.md): 19 suites, dos arranques e importación aprobados en Godot 4.7.2; nueva suite de cierre y documentación, sin cambios al código jugable de `2cda472`. Se explicitan límites de resultado de partida, reloj ante bloqueos y balance. No integrar hasta revisión de TARS y autorización final del propietario. Fase 23 solo tiene [diseño técnico](PHASE_23.md), sin implementación.
+
 ## Resultado y forma de entrega
 
 Una batalla de mesa viva: criaturas que expresan su especie y reaccionan a oportunidades locales, mientras el jugador conserva autoridad sobre destinos, ataques y acciones. Sin marcha obligatoria al enemigo. Mantener cuatro especies, tres terrenos y la valla actuales, vista vertical 4×8 y simulación lógica 8×4 a 20 Hz.
