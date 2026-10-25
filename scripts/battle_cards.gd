@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Catalog = preload("res://scripts/battle_catalog.gd")
-var copies_per_species := 3
+const AUTHENTIC_UNITS_PER_SPECIES := 1
 var construction_recovery_ticks := 120
 var copies: Array[Dictionary] = []
 var terrain_owners: Dictionary = {}
@@ -14,7 +14,7 @@ func reset(kinds: Array) -> void:
 	for player in range(2):
 		for kind in kinds:
 			copies[player][kind] = []
-			for index in range(maxi(1, copies_per_species)):
+			for index in range(AUTHENTIC_UNITS_PER_SPECIES):
 				copies[player][kind].append({"copy_id": index, "unit_id": -1, "ready_tick": 0})
 	terrain_owners.clear()
 	buildings.clear()
@@ -93,6 +93,10 @@ func availability(player: int, kind: String, sim) -> Dictionary:
 		result["reason"] = "match_finished"
 	elif not sim.loadouts[player].contains(kind):
 		result["reason"] = "not_equipped"
+	elif Catalog.CARDS[kind]["category"] == "creature" and result["active"] > 0:
+		result["reason"] = "species_active"
+	elif Catalog.CARDS[kind]["category"] == "creature" and result["recovering"] > 0:
+		result["reason"] = "species_recovering"
 	elif sim.players[player]["essence"] < result["cost"] or result["available"] == 0:
 		result["reason"] = "unavailable"
 	else:

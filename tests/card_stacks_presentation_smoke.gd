@@ -66,10 +66,13 @@ func _run() -> void:
 	viewport.push_input(emulated, true)
 	_check(view.board.sim.queued_commands.size() == queued_before + 1, "Emulated mouse cannot duplicate touch placement")
 	view.board._process(0.05)
-	_check(view.board.sim.get_unit(3).get("kind") == "pig" and view.board.sim.players[0]["essence"] == 2 and view.placement.draft.is_empty(), "Tick accepts deployment and updates UI")
-	_check(view.stacks.top("creature") == "pig" and view.panel.cards["creature"].data["copies_text"].begins_with("2 libre"), "Playing preserves top card while separate copy inventory changes")
+	_check(view.board.sim.get_unit(2).get("kind") == "pig" and view.board.sim.players[0]["essence"] == 2 and view.placement.draft.is_empty(), "Tick accepts deployment and updates UI")
+	_check(view.stacks.top("creature") == "pig" and view.panel.cards["creature"].data["copies_text"] == "Desplegada", "Playing preserves top card while separate copy inventory changes")
+	var active_essence: int = view.board.sim.players[0]["essence"]
+	_tap(viewport, card_rect.get_center())
+	_check(view.placement.draft.is_empty() and view.placement.message == "species_active" and view.board.sim.players[0]["essence"] == active_essence, "Active species remains in its stack but cannot start a second deployment")
 	_tap(viewport, view.board._center(Vector2i(1, 1)))
-	_check(view.board.selected_unit_id == 3, "Tactical selection resumes after acknowledgement")
+	_check(view.board.selected_unit_id == 2, "Tactical selection resumes after acknowledgement")
 	_cycle(view, viewport, "creature")
 	while view.board.sim.tick_count < 60:
 		view.board._process(0.05)
@@ -81,7 +84,7 @@ func _run() -> void:
 	_touch(viewport, destination, false)
 	_check(view.placement.busy(), "Releasing over a valid cell confirms direct drag")
 	view.board._process(0.05)
-	_check(view.board.sim.get_unit(4).get("kind") == "boar" and view.stacks.top("creature") == "boar" and view.board.selected_unit_id == 3, "Direct deployment preserves top card and previous tactical selection")
+	_check(view.board.sim.get_unit(3).get("kind") == "boar" and view.stacks.top("creature") == "boar" and view.board.selected_unit_id == 2, "Direct deployment preserves top card and previous tactical selection")
 	while view.board.sim.tick_count < 120:
 		view.board._process(0.05)
 	var terrain: Rect2 = view.panel.cards["terrain"].get_global_rect()
@@ -124,6 +127,21 @@ func _run() -> void:
 	_check(view.board.sim.cards.terrain_owners.get(Vector2i(0, 0)) == 0 and view.stacks.top("terrain") == "cornfield", "PC drag deploys one terrain without rotating")
 	_cycle(view, viewport, "terrain")
 	_check(view.stacks.top("terrain") == "mud" and view.panel.cards["terrain"].data["recovery_text"] == "Falta esencia", "Unavailable types stay navigable and distinguish essence from recovery")
+	for index in range(3):
+		_cycle(view, viewport, "creature")
+	_check(view.stacks.top("creature") == "pig", "Active authentic species is still reachable through circular navigation")
+	view.board.sim.get_unit(2)["hp"] = 0 # Defeat fixture for presentation; normal cleanup starts recovery.
+	view.board._process(0.05)
+	var ready: int = view.board.sim.players[0]["recovering"][2]["ready_tick"]
+	var species_cursor: Dictionary = view.stacks.snapshot()
+	_check(view.panel.cards["creature"].data["copies_text"] == "Recuperando" and str(view.panel.cards["creature"].data["recovery_text"]).contains("rec."), "Defeated species stays visible with recovery countdown")
+	_tap(viewport, card_rect.get_center())
+	_check(view.placement.draft.is_empty() and view.placement.message == "species_recovering", "Recovering top card cannot start a replacement deployment")
+	while view.board.sim.tick_count < ready:
+		view.board._process(0.05)
+	_check(view.stacks.snapshot() == species_cursor and view.panel.cards["creature"].data["copies_text"] == "Disponible", "Recovery changes availability without rotating any stack")
+	_check(not view.panel.status.text.contains("recuperándose"), "Recovery completion also clears the obsolete unavailability explanation")
+	_check(view.board.sim.units.all(func(unit): return unit["owner"] != 0 or unit["kind"] != "pig"), "Card recovery does not automatically recreate a creature")
 	await process_frame
 	viewport.size = Vector2i(360, 800)
 	await process_frame

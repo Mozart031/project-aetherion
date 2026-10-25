@@ -13,12 +13,10 @@ func _input(sim: AetherionSimulation) -> void:
 			sim.place_terrain(Vector2i(3, 0), "mud")
 			sim.place_terrain(Vector2i(2, 3), "cornfield")
 			sim.queue_play_card(0, "pig", Vector2i(3, 0))
-			sim.queue_play_card(0, "pig", Vector2i(3, 3))
 			sim.queue_play_card(1, "pig", Vector2i(4, 0))
-			sim.queue_play_card(1, "pig", Vector2i(4, 3))
 		30: sim.queue_hold(0, 1)
 		50: sim.queue_stop(0, 1)
-		80: sim.queue_destination(0, 2, Vector2i(2, 0))
+		80: sim.queue_destination(0, 1, Vector2i(2, 0))
 		100: sim.queue_ecology(0, 1, false)
 		120: sim.queue_ecology(0, 1, true)
 		160: sim.queue_act_at(0, 1, "roll", Vector2i(3, 0))
@@ -44,9 +42,10 @@ func _initialize() -> void:
 	var pair: Array[AetherionSimulation] = []
 	for reverse in [false, true]:
 		var sim := AetherionSimulation.new()
+		sim.players[0]["essence"] = 8 # Distinct-species movement conflict fixture.
 		sim.natural.enabled = true
 		sim.queue_play_card(0, "pig", Vector2i(1, 1))
-		sim.queue_play_card(0, "pig", Vector2i(2, 2))
+		sim.queue_play_card(0, "boar", Vector2i(2, 2))
 		sim.step()
 		var commands := [{"type": "order", "player": 0, "unit_id": 1, "goal": {"kind": "move_to", "cell": Vector2i(2, 1)}}, {"type": "order", "player": 0, "unit_id": 2, "goal": {"kind": "move_to", "cell": Vector2i(2, 1)}}]
 		if reverse:

@@ -43,9 +43,7 @@ func _start_demo() -> void:
 	accumulator = 0.0
 	selected_unit_id = -1
 	sim.queue_summon(0, "beaver", Vector2i(1, 1))
-	sim.queue_summon(0, "beaver", Vector2i(1, 2))
 	sim.queue_summon(1, "beaver", Vector2i(6, 1))
-	sim.queue_summon(1, "beaver", Vector2i(6, 2))
 
 func _board_rect() -> Rect2:
 	var available := get_viewport_rect().size - Vector2(32, 200)

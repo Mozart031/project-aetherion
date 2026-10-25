@@ -37,7 +37,7 @@ Agregar **«Mantener posición»** como orden explícita persistente: termina el
 - Caballos compiten por maizales de una ración; consumirlos cambia objetivos y disponibilidad. Sin regeneración automática del cultivo.
 - Barro permite recuperación al cerdo, pero entrar sigue siendo lento: importa dónde y cuándo moverse.
 - Cueva conserva entrada/salida explícitas. Los perfiles no sacan al ocupante ni le dan invulnerabilidad.
-- Copias de la misma especie deciden según su propio daño, posición y amenaza; ningún estado se comparte globalmente por especie.
+- Cada auténtica tiene estado propio. Tras la corrección de Fase 23 solo hay una por especie y jugador; los rivales y especies distintas mantienen su independencia.
 
 Reservar **intenciones** de recurso para evitar que dos criaturas naturales reclamen la misma ración. Recomendación técnica: solicitud más antigua y luego ID, sin azar. No son reservas físicas: una orden del jugador prevalece y los conflictos de movimiento siguen rechazándose como ahora. Liberar intención al morir, recibir otra orden, consumir/perder recurso o completar la interacción. Si alguien sigue ocupando barro, otros esperan o buscan alternativa; no empujarlo ni obligarlo a salir.
 
@@ -80,7 +80,7 @@ Sin segundo motor de movimiento, otro pathfinder ni dependencias externas. Se ma
 
 - Repetir las 12 suites de Fase 21; con perfiles desactivados conservar resultados y economía.
 - Especie: elegibilidad, radio, frontera, prioridades, ausencia de marcha, habilidad en cooldown, muerte en preparación y cancelación por jugador.
-- Instancia: copias de una especie con objetivos/recuperación distintos, sin estado compartido.
+- Instancia: auténticas de distintas especies o jugadores con objetivos/recuperación distintos; ninguna segunda auténtica durante actividad o recuperación.
 - Recursos: dos solicitantes, consumo por otra orden, liberación por muerte/orden, barro ocupado y maizal propio/neutral/rival.
 - Autoridad: orden bloqueada no cede al instinto; mantener persiste; refugio no se abandona; no borrar paso/daño aceptado al cambiar de objetivo.
 - Determinismo: mismo registro de entradas con distintos FPS produce estados/eventos iguales; invertir comandos donde se promete independencia de orden.

@@ -16,7 +16,7 @@ Implementada y validada antes de iniciar B, registrada en `dcd7c52`. Siete suite
 
 ## Demo de revisión
 
-F5 abre `scenes/tactical_demo.tscn`. Dos castores azules y dos naranjas, existentes en los datos, respetan el presupuesto inicial de esencia. Seleccionar azul; tocar celda distante para navegar o naranja para perseguir/atacar. Se muestran estado de orden, ruta planificada y objetivo. Botones para detener y reiniciar el escenario. La demo anterior y sus pruebas se conservan; el productor antiguo de ataques automáticos se desactiva solo en la demo táctica.
+Escena técnica conservada: `scenes/tactical_demo.tscn` (F6; F5 conserva la demo actual). Tras la corrección de Fase 23 hay un castor azul y uno naranja: una auténtica de esa especie por jugador, pagando su coste existente. Seleccionar azul; tocar celda distante para navegar o naranja para perseguir/atacar. Se muestran estado de orden, ruta planificada y objetivo. Botones para detener y reiniciar el escenario. La demo anterior y sus pruebas se conservan; el productor antiguo de ataques automáticos se desactiva solo en la demo táctica.
 
 ## Entrega B: reglas provisionales aprobadas e implementadas
 

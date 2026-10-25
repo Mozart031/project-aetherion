@@ -1,5 +1,7 @@
 # Fase 22 — verificación final para revisión de TARS
 
+**Nota de continuidad:** este informe registra la validación histórica de 22. La corrección posterior de Fase 23 sustituye la antigua regla de múltiples copias por una auténtica por especie/jugador; las pruebas de unicidad y recuperación vigentes están en [PHASE_23_UNIQUE_SPECIES_REVIEW.md](PHASE_23_UNIQUE_SPECIES_REVIEW.md). No autoriza duplicados actuales ni modifica por sí sola main.
+
 **Estado actual: integrada en main desde `fe82be9`, con autorización oficial del director creativo posterior a la revisión favorable de TARS.** Merge sin conflictos, preservando historial y sin cambios adicionales de jugabilidad. Se repitieron las 19 suites y los dos arranques sobre el resultado de integración: todos aprobados en Godot 4.7.2. Las secciones siguientes conservan el registro de revisión/preparación previo; sus esperas de autorización quedaron satisfechas por esta decisión. Las limitaciones de Núcleo, balance, resultado/reloj y pruebas Android permanecen.
 
 Fecha: 2026-10-25. Rama: `codex/phase-22-battle-depth`. Implementación revisada: `2cda47250c334671e54d4cb9a311c0b3b6b28997`; base `main`/`origin/main`: `1c740d6`. Estado inicial limpio y remoto comprobado.
@@ -12,9 +14,9 @@ Fecha: 2026-10-25. Rama: `codex/phase-22-battle-depth`. Implementación revisada
 | --- | --- | --- |
 | Prioridad manual | Correcta en los casos probados. | Ataque dirigido sustituye una intención natural ya iniciada, libera su recurso, acaba el paso comprometido y se aproxima/ataca sin reanudar la cura. Las suites anteriores cubren órdenes bloqueadas, cambios de destino, preparación interrumpida, refugio y daño aceptado. |
 | Mantener posición | Persiste e impide nuevos viajes autónomos. | Termina el paso aceptado antes de detenerse; permite defensa adyacente estacionaria. No equivale a «Detener», que permite volver a instintos. |
-| Ecología individual | Correcta entre dos copias de la misma especie. | Desactivar una conserva su herida mientras la otra se recupera; reactivarla no cancela la navegación explícita de la otra. No desactiva la defensa adyacente básica ni afecta al rival. |
+| Ecología individual | Control independiente por criatura. | La prueba actual usa cerdo y caballo auténticos distintos: desactivar uno no afecta la recuperación/orden del otro. Se eliminó el fixture antiguo con dos copias propias de una especie. |
 | Ir y actuar | Acción correcta al llegar y al quedar disponible. | Cerdo/barro, caballo/maizal, cueva/entrada/salida y gólem/valla. No empieza durante el viaje ni antes del cooldown; consumo de maíz y cantidades de cura conservados. Si desaparece el recurso, termina y respeta el paso comprometido. |
-| Recuperación por copia | Bloqueo hasta el tick exacto, sin bloquear otras copias. | Cerdo derrotado en tick 2: copia 0 bloqueada hasta tick 241 inclusive; disponible y desplegable pagando esencia en tick 242. Durante ese plazo se despliegan copias 1 y 2, que siguen activas. Intento prematuro no gasta esencia. |
+| Recuperación de auténtica | Bloqueo de esa especie/jugador hasta el tick exacto. | Cerdo derrotado en tick 2: carta bloqueada hasta tick 241 inclusive; vuelve a ser desplegable pagando esencia en tick 242. No se permiten copias 1/2 como reemplazo; otras especies y el rival siguen independientes. |
 | Cerdo, barro y contrajuego | Cura y desplazamiento acotados; persecución eficaz en el caso probado. | Jabalí fresco con ataque dirigido derrota al cerdo en tick 37, después de dos pasos naturales hacia barro y una cura de 1 HP. Sin cambiar vida, posiciones o esencia en ese combate. Prueba separada: cerdo herido en barro cura exactamente 1 por acción, respeta 60 ticks entre preparaciones, nunca supera 4 HP y descansa al quedar sano. |
 | Resultado y 20 Hz | Consistentes con el prototipo actual; resultado final de diseño incompleto. | Replay mediante `_process` real de la escena a 20/30/120 FPS: mismas vistas/eventos por tick. Se comprueban límite exacto de 12000 ticks, victoria por vida del Núcleo, derrota mutua/empate y estado congelado después del final. Ver límites abajo. |
 | Regresiones y arranque | 19 suites aprobadas en Godot 4.7.2. | Las 18 publicadas y la nueva `phase22_closure_smoke.gd`; arranque de la demo de F5 y de la escena de Fase 22, más importación del editor. Sin errores de scripts. |
@@ -41,7 +43,7 @@ Motor verificado: `4.7.2.stable.official.ed1daf0bf`. Se ejecutaron todos los arc
 
 - Base y regresiones: `board_coordinates`, `presentation`, `simulation`, `movement`, `movement_presentation`, `tactical_orders`, `tactical_presentation`, `ecology`, `context_actions`, `battle_systems`, `battle_presentation`, `battle_scenario`.
 - Fase 22 inicial: `natural_intents`, `context_orders`, `battle_feedback`, `battle_depth_presentation`, `battle_depth_determinism`, `battle_depth_scenario`.
-- Cierre: [phase22_closure_smoke.gd](../tests/phase22_closure_smoke.gd), con controles de dos copias, ataque manual sobre viaje natural, llegada/cooldown contextual, recuperación exacta con pagos reales, persecución del cerdo, cadencia de cura, resultados y acumulador real de la escena.
+- Cierre: [phase22_closure_smoke.gd](../tests/phase22_closure_smoke.gd), con controles de especies distintas, ataque manual sobre viaje natural, llegada/cooldown contextual, recuperación exacta con pagos reales, persecución del cerdo, cadencia de cura, resultados y acumulador real de la escena.
 
 Arranques/importación:
 

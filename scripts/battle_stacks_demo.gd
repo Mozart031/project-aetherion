@@ -160,7 +160,14 @@ func _process(_delta: float) -> void:
 		_refresh()
 
 func _reason_text() -> String:
-	return {"unavailable": "Falta esencia o una copia libre.", "occupied": "Espacio ocupado o reservado.", "own_territory_required": "Coloca en tus filas inferiores.", "invalid_target": "Elige una criatura propia herida.", "not_equipped": "Carta no equipada.", "refuge_occupied": "Primero sal del refugio.", "terrain_locked_or_same": "Terreno igual o bajo ataque.", "accepted": "Carta desplegada; sigue arriba.", "match_finished": "Partida terminada."}.get(placement.message, "")
+	if placement.message in ["species_active", "species_recovering"]:
+		var species: Dictionary = board.sim.cards.state(0, stacks.top("creature"), board.sim)
+		if species["active"] > 0:
+			return "Esta especie ya está desplegada."
+		if species["recovering"] > 0:
+			return "Esta especie está recuperándose."
+		return ""
+	return {"unavailable": "Falta esencia o disponibilidad.", "occupied": "Espacio ocupado o reservado.", "own_territory_required": "Coloca en tus filas inferiores.", "invalid_target": "Elige una criatura propia herida.", "not_equipped": "Carta no equipada.", "refuge_occupied": "Primero sal del refugio.", "terrain_locked_or_same": "Terreno igual o bajo ataque.", "accepted": "Carta desplegada; sigue arriba.", "match_finished": "Partida terminada."}.get(placement.message, "")
 
 func _refresh() -> void:
 	if not is_instance_valid(panel.status):
@@ -175,7 +182,9 @@ func _refresh() -> void:
 		var state: Dictionary = board.sim.cards.availability(0, id, board.sim)
 		var copies := "Vacía"
 		if not id.is_empty():
-			copies = "%s libre · %s act." % [state["available"], state["active"]] if category == "creature" else ("Disponible" if state["available"] > 0 else ("En tablero" if state["active"] > 0 else "Recuperando"))
+			copies = "Disponible" if state["available"] > 0 else ("En tablero" if state["active"] > 0 else "Recuperando")
+			if category == "creature":
+				copies = "Desplegada" if state["active"] > 0 else ("Recuperando" if state["recovering"] > 0 else "Disponible")
 		var recovery := "↓ otra · ↑ colocar"
 		if state["recovering"] > 0:
 			recovery = "%s rec. %.1fs" % [state["recovering"], maxf(0, float(state["ready_tick"] - board.sim.tick_count) / 20)]

@@ -30,7 +30,6 @@ func _start_battle() -> void:
 	sim.place_terrain(Vector2i(2, 1), "cornfield")
 	sim.place_terrain(Vector2i(2, 2), "cave")
 	sim.queue_play_card(1, "pig", Vector2i(6, 1))
-	sim.queue_play_card(1, "pig", Vector2i(6, 2))
 	accumulator = 0.0
 	selected_unit_id = -1
 	selected_card = ""
@@ -214,7 +213,7 @@ func _after_sim_step() -> void:
 		elif type == "special_cancelled":
 			last_message = "Acción interrumpida: no queda un efecto pendiente."
 		elif type == "card_recovered" and event.get("player", LOCAL_PLAYER) == LOCAL_PLAYER:
-			last_message = "Una copia de " + str(Catalog.CARDS.get(event["kind"], {"label": "criatura"})["label"]) + " vuelve disponible."
+			last_message = "La carta de " + str(Catalog.CARDS.get(event["kind"], {"label": "criatura"})["label"]) + " vuelve disponible."
 	if sim.tick_count > 302 and scheduled_boar and sim.units.all(func(unit): return unit["owner"] == LOCAL_PLAYER) and sim.cards.buildings.all(func(building): return building["owner"] == LOCAL_PLAYER):
 		last_message = "Escenario despejado. Reinicia para otra batalla."
 	feedback = feedback.filter(func(effect): return int(effect["expires"]) > sim.tick_count)

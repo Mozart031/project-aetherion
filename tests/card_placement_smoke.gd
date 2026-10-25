@@ -32,17 +32,17 @@ func _test_draft_and_commit() -> void:
 	sim.step()
 	placement.consume(sim.get_player_view(0))
 	_check(sim.players[0]["essence"] == 2 and sim.units.size() == 1 and placement.draft.is_empty(), "Accepted command pays exactly once and closes matching draft")
-	_check(sim.cards.state(0, "pig", sim)["available"] == 2, "Deployment allocates an individual copy")
+	_check(sim.cards.state(0, "pig", sim)["available"] == 0, "Deployment allocates an individual copy")
 
 func _test_race_and_replay() -> void:
 	var sim := AetherionSimulation.new()
 	var placement := Placement.new()
 	placement.begin(0, "creature", "pig", sim)
-	sim.queue_play_card(0, "pig", Vector2i(1, 1)) # Earlier same-tick placement wins occupancy.
+	sim.queue_play_card(0, "fence", Vector2i(1, 1)) # Earlier same-tick placement wins occupancy.
 	placement.confirm(sim, Vector2i(1, 1))
 	sim.step()
 	placement.consume(sim.get_player_view(0))
-	_check(sim.units.size() == 1 and sim.players[0]["essence"] == 2 and placement.message == "occupied" and not placement.busy(), "Changed destination rejects at commit without charging the rejected draft")
+	_check(sim.units.is_empty() and sim.players[0]["essence"] == 2 and placement.message == "occupied" and not placement.busy(), "Changed destination rejects at commit without charging the rejected draft")
 	_check(placement.confirm(sim, Vector2i(2, 2)), "Rejected draft can select a new valid destination")
 	placement.consume({"finished": false, "events": [{"type": "card_result", "player": 0, "request_id": 1, "accepted": true}]})
 	_check(placement.busy() and placement.draft["request_id"] == 2, "An old acknowledgement cannot close a newer pending placement")
@@ -50,10 +50,10 @@ func _test_race_and_replay() -> void:
 	sim.queued_commands.append(command.duplicate(true))
 	sim.step()
 	placement.consume(sim.get_player_view(0))
-	_check(sim.units.size() == 2 and sim.players[0]["essence"] == 0 and placement.draft.is_empty(), "Duplicate request confirms one deployment and one payment")
+	_check(sim.units.size() == 1 and sim.players[0]["essence"] == 0 and placement.draft.is_empty(), "Duplicate request confirms one deployment and one payment")
 	sim.queued_commands.append(command)
 	sim.step()
-	_check(sim.units.size() == 2 and sim.players[0]["essence"] == 0, "Late retransmission returns cached result without replaying a card")
+	_check(sim.units.size() == 1 and sim.players[0]["essence"] == 0, "Late retransmission returns cached result without replaying a card")
 	_check(not placement.begin(0, "creature", "pig", sim), "Insufficient essence cannot start a new draft")
 	sim = AetherionSimulation.new()
 	sim.queue_play_card(0, "pig", Vector2i(1, 1))
