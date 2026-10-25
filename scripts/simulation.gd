@@ -2,8 +2,11 @@ extends RefCounted
 class_name AetherionSimulation
 
 ## Deterministic rules scaffold. One step equals 1/20 second.
-## No networking, autonomous AI or terrain effects yet.
+## Local deterministic prototype; explicit orders and optional adjacent defense.
 const Movement = preload("res://scripts/movement.gd")
+const TacticalOrders = preload("res://scripts/tactical_orders.gd")
+const NaturalDefense = preload("res://scripts/natural_defense.gd")
+const TerrainEffects = preload("res://scripts/terrain_effects.gd")
 const WIDTH := 8
 const HEIGHT := 4
 const TICK_RATE := 20
@@ -31,6 +34,9 @@ var finished := false
 var winner := -1
 var movement := Movement.new()
 var move_duration_ticks := 6
+var orders := TacticalOrders.new()
+var natural_defense := NaturalDefense.new()
+var terrain := TerrainEffects.new()
 
 func _init() -> void:
 	reset()
@@ -44,6 +50,8 @@ func reset() -> void:
 	queued_commands.clear()
 	events.clear()
 	movement.reset()
+	orders.reset()
+	terrain.reset()
 	players = [
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "core_known_to": [true, false], "recovering": {}},
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "core_known_to": [false, true], "recovering": {}}
@@ -63,12 +71,28 @@ func place_core(player: int, cell: Vector2i) -> bool:
 func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
 	queued_commands.append({"type": "summon", "player": player, "kind": kind, "cell": cell})
 
+func place_terrain(cell: Vector2i, kind: String) -> bool:
+	return tick_count == 0 and terrain.place(cell, kind)
+
 func queue_attack(attacker_id: int, defender_id: int) -> void:
 	queued_commands.append({"type": "attack", "attacker": attacker_id, "defender": defender_id})
 
 func queue_move(player: int, unit_id: int, destination: Vector2i) -> void:
 	if not finished:
 		queued_commands.append({"type": "move", "player": player, "unit_id": unit_id, "cell": destination})
+
+func queue_destination(player: int, unit_id: int, destination: Vector2i) -> void:
+	_queue_order(player, unit_id, {"kind": "move_to", "cell": destination})
+
+func queue_target(player: int, unit_id: int, target_id: int) -> void:
+	_queue_order(player, unit_id, {"kind": "attack_target", "target_id": target_id})
+
+func queue_stop(player: int, unit_id: int) -> void:
+	_queue_order(player, unit_id, {"kind": "stop"})
+
+func _queue_order(player: int, unit_id: int, goal: Dictionary) -> void:
+	if not finished:
+		queued_commands.append({"type": "order", "player": player, "unit_id": unit_id, "goal": goal})
 
 func can_move(player: int, unit_id: int, destination: Vector2i) -> bool:
 	return not finished and movement.can_move(get_unit(unit_id), player, destination, movement.occupied_cells(units), movement.active)
@@ -84,7 +108,7 @@ func get_player_view(observer: int) -> Dictionary:
 		if not player["core_known_to"][observer]:
 			player.erase("core_cell")
 		player.erase("core_known_to")
-	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "motions": movement.active.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
+	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "motions": movement.active.duplicate(true), "orders": orders.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
@@ -115,6 +139,9 @@ func step() -> void:
 	for command in commands:
 		if command["type"] == "summon":
 			_apply_summon(command)
+	orders.ingest(commands, self)
+	commands.append_array(orders.produce(self))
+	commands.append_array(natural_defense.produce(self, commands))
 	# Snapshot before damage/arrivals: no swaps, chains or arrival-tick redirection.
 	var occupied := movement.occupied_cells(units)
 	var busy := movement.active.duplicate(true)
@@ -159,13 +186,17 @@ func step() -> void:
 		else:
 			survivors.append(unit)
 	units = survivors
+	orders.cleanup(self)
 	# Accepted attacks use the origin and apply damage before any arrival.
 	events.append_array(movement.advance(units, tick_count))
 	_check_end()
 	if finished:
 		movement.reset()
+		orders.reset()
 	else:
-		events.append_array(movement.resolve(commands, units, tick_count, move_duration_ticks, occupied, busy))
+		var movement_events := movement.resolve(commands, units, tick_count, move_duration_ticks, occupied, busy, terrain.durations(move_duration_ticks))
+		events.append_array(movement_events)
+		orders.observe_movement(self, movement_events)
 
 func _apply_summon(command: Dictionary) -> void:
 	var player: int = int(command["player"])
