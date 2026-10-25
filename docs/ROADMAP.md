@@ -11,11 +11,11 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 | Sincronización documental | Incorporar la metodología de colaboración y esta hoja de ruta; confirmar Git y conservar el trabajo existente. | Documentación actualizada; base local y remota confirmada en `5319303` y suite aprobada en Godot 4.7.2. El commit y la confirmación de publicación se comunican al entregar; no se incluye código de la Fase 20.1B. |
 | Fase 20.1B: selección y vida | Selección de criaturas propias por clic/toque, resaltado, barras de vida, limpieza tras derrota y coordenadas adaptadas a la ventana. | Aprobada por el propietario tras pruebas visuales en Godot. Integración en `main` de `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`; pruebas de presentación, combate y arranque repetidas en Godot 4.7.2. Simulación intacta. |
 | Fase 20.1C, primera parte: adaptación vertical | Conversión visual 4×8 y entrada reversible, conservando lógica 8×4 y combate. | Aprobada por el propietario e integrada en `main` desde `d529b93c5f2b4d910d3c11b2bb52fe9b888e6e78`. Alcance revisado; pruebas de coordenadas, presentación, combate y arranque repetidas en Godot 4.7.2. UID conservados y versionados. |
-| Fase 20.1C, movimiento interactivo | Prueba técnica de un paso ortogonal de 6 ticks, origen ocupado/destino reservado, sin esencia, territorio rival permitido y cooldown de ataque independiente. | Parámetros iniciales aprobados; rechazo determinista de conflictos y protección del daño aceptado/Núcleos ocultos obligatorios. [Propuestas pendientes](PHASE_20_1C.md) para ataques activos y descubrimiento. Movimiento no implementado ni autorizado para implementación todavía. |
+| Fase 20.1C, movimiento interactivo | Prueba técnica de un paso ortogonal de 6 ticks, origen ocupado/destino reservado, sin esencia, territorio rival permitido y cooldown de ataque independiente. | Implementación autorizada y preparada en `codex/phase-20-1c-basic-movement`, pendiente de revisión de TARS y validación visual antes de integrar. Cinco suites y arranque aprobados en Godot 4.7.2. Núcleo rival oculto en el prototipo por decisión adicional del propietario; descubierto solo en fixtures. |
 
 ## Distribución visual aprobada
 
-Isla del Caos utiliza **4 columnas × 8 filas** en `main`, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. La simulación lógica 8×4 permanece intacta; el adaptador reversible se aplica al dibujo, selección y posiciones de barras. La demo mantiene jugador local 0; ambas perspectivas del adaptador se prueban sin añadir PvP. No se implementa movimiento.
+Isla del Caos utiliza **4 columnas × 8 filas** en `main`, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. Se conservan las dimensiones lógicas 8×4; el adaptador reversible se aplica al dibujo, selección y posiciones de barras. La demo mantiene jugador local 0; ambas perspectivas del adaptador se prueban sin añadir PvP. El movimiento básico se encuentra únicamente en la rama de revisión.
 
 ### Validación de la adaptación vertical
 
@@ -30,9 +30,18 @@ Las cuatro comprobaciones pasan en Godot 4.7.2 y se repiten para la integración
 
 ## Preparación de movimiento
 
-Parámetros aprobados y aún sin implementar: un paso ortogonal de 6 ticks, origen ocupado, destino reservado, sin coste de esencia, entrada al territorio rival, rechazo determinista de conflictos e independencia del cooldown de ataque. El daño ya aceptado no se cancela al moverse. No filtrar Núcleos ocultos mediante consultas, resaltados ni ataques.
+Parámetros aprobados e implementados en la rama de revisión: un paso ortogonal de 6 ticks configurables, origen ocupado, destino reservado, sin coste de esencia, entrada al territorio rival, rechazo determinista de conflictos e independencia del cooldown de ataque. El daño ya aceptado no se cancela al moverse. Consultas y vistas de presentación no filtran ubicaciones de Núcleos ocultos; atacarlos no consume cooldown ni genera eventos reveladores.
 
-La orden manual de una casilla es solo una prueba técnica. El diseño final permitirá ordenar destinos sin controlar cada paso; ejecución de movimiento, comportamiento natural y órdenes especiales se mantienen separados. No hay IA autónoma, rutas largas ni habilidades implementadas. La implementación de movimiento espera una nueva autorización y decisiones sobre ataques activos y descubrimiento, detalladas en `PHASE_20_1C.md`.
+La orden manual de una casilla es solo una prueba técnica. El diseño final permitirá ordenar destinos sin controlar cada paso; ejecución de movimiento, comportamiento natural y órdenes especiales se mantienen separados. No hay IA autónoma, rutas largas ni habilidades implementadas. El propietario aprobó conservar oculto el Núcleo rival en este prototipo y probar descubierto solo mediante fixtures. Esto impide por ahora ganar destruyendo un Núcleo rival aún oculto; el descubrimiento real sigue pendiente de diseño.
+
+### Validación de movimiento en Godot 4.7.2
+
+```text
+godot --headless --path . --script res://tests/movement_smoke.gd
+godot --headless --path . --script res://tests/movement_presentation_smoke.gd
+```
+
+Ambas suites nuevas pasan, además de las tres suites existentes de coordenadas, presentación y combate, el arranque headless y la importación del editor. Se prueban ocupación, reservas, conflictos en órdenes invertidos, duplicados, órdenes contradictorias, daño en tránsito y al llegar, muerte y bajas mutuas, recuperación, reutilización de destinos, reinicio, fin de partida, diferencias de ubicación del Núcleo oculto, protección de vistas y ataque descubierto mediante fixture. La prueba de presentación cubre clic/toque, ratón emulado, interpolación entre ticks, selección en tránsito y resize. Pendientes revisión de TARS, validación visual y toque real Android. No fusionar esta rama sin aprobación.
 
 ## Objetivos posteriores ya registrados
 
@@ -74,9 +83,9 @@ godot --headless --path . --quit-after 5
 
 ## Decisiones pendientes fuera del incremento actual
 
-- Detalle de resolución de conflictos, órdenes contradictorias e interacción del movimiento con ataques; los parámetros iniciales anteriores ya están aprobados.
-- Duración y alcance del bloqueo bajo ataque, sin reinterpretar la regla aprobada.
-- Descubrimiento del Núcleo y restricciones correspondientes.
+- Validación por TARS del incremento y de sus convenciones documentadas de resolución determinista y llegada.
+- Futuras ventanas de ataque activo y retirada/intercambio: no se han introducido ni confundido con desplazamiento.
+- Mecánica real de descubrimiento del Núcleo, fuera del prototipo aprobado.
 - Identidad de cartas y recuperación cuando existen varias criaturas de la misma especie.
 
-Estos pendientes se detallan en la propuesta de la Fase 20.1C y no autorizan cambios de mecánicas ni implementación de movimiento sin aprobación.
+Estos pendientes no autorizan ampliar el alcance ni integrar la rama sin revisión de TARS y aprobación visual del propietario.
