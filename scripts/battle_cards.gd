@@ -105,7 +105,7 @@ func availability(player: int, kind: String, sim) -> Dictionary:
 	return result
 
 ## Shared read-only rule query. No copy allocation, essence changes or core queries.
-func validate_play(command: Dictionary, sim, commands: Array) -> Dictionary:
+func validate_play(command: Dictionary, sim, commands: Array, at_tick: int = -1) -> Dictionary:
 	var player: int = command["player"]
 	var kind: String = command["card"]
 	var cell: Vector2i = command["cell"]
@@ -130,7 +130,7 @@ func validate_play(command: Dictionary, sim, commands: Array) -> Dictionary:
 			if unit["cell"] == cell and unit.get("sheltered", false):
 				reason = "refuge_occupied"
 				break
-		if reason.is_empty() and (sim.terrain.cells.get(cell, "") == kind or (sim.terrain.cells.has(cell) and sim.cell_under_attack(cell, commands))):
+		if reason.is_empty() and (sim.terrain.cells.get(cell, "") == kind or (sim.terrain.cells.has(cell) and sim.cell_under_attack(cell, commands, at_tick))):
 			reason = "terrain_locked_or_same"
 	result["reason"] = reason
 	result["valid"] = reason.is_empty()

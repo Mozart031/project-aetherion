@@ -138,7 +138,8 @@ func configure_loadout(player: int, equipped: Dictionary) -> bool:
 	return tick_count == 0 and player in [0, 1] and loadouts[player].configure(equipped)
 
 func get_card_placement(player: int, card: String, cell: Vector2i, target_id: int = -1) -> Dictionary:
-	return cards.validate_play({"player": player, "card": card, "cell": cell, "target_id": target_id}, self, queued_commands)
+	# Card commands execute before orders/damage in the next fixed tick.
+	return cards.validate_play({"player": player, "card": card, "cell": cell, "target_id": target_id}, self, queued_commands, tick_count + 1)
 
 func queue_play_card(player: int, card: String, cell: Vector2i, target_id: int = -1, request_id: int = -1) -> void:
 	if not finished:
@@ -157,7 +158,9 @@ func get_target(id: int) -> Dictionary:
 	var unit := get_unit(id)
 	return cards.get_building(id) if unit.is_empty() else unit
 
-func cell_under_attack(cell: Vector2i, commands: Array) -> bool:
+func cell_under_attack(cell: Vector2i, commands: Array, at_tick: int = -1) -> bool:
+	if finished:
+		return false
 	var targets: Array[Dictionary] = []
 	for unit in units:
 		if unit["cell"] == cell:
@@ -167,14 +170,21 @@ func cell_under_attack(cell: Vector2i, commands: Array) -> bool:
 		targets.append(building)
 	for target in targets:
 		for attacker in units:
-			var preparation: Dictionary = actions.active.get(attacker["id"], {})
-			if preparation.get("kind") == "demolish" and int(preparation["end_tick"]) <= tick_count and preparation["target_id"] == target["id"] and _can_attack(attacker, target, true):
-				return true
-			if not _can_attack(attacker, target):
+			if attacker["hp"] <= 0 or target["hp"] <= 0:
 				continue
-			var goal: Dictionary = orders.active.get(attacker["id"], {}).get("goal", {})
-			if goal.get("kind") == "attack_target" and goal.get("target_id") == target["id"]:
+			var preparation: Dictionary = actions.active.get(attacker["id"], {})
+			# An accepted preparation commits its target throughout the wind-up.
+			if preparation.get("kind") == "demolish" and preparation["target_id"] == target["id"] and _in_combat_position(attacker, target, true):
 				return true
+			var goal: Dictionary = orders.active.get(attacker["id"], {}).get("goal", {})
+			if goal.get("kind") == "attack_target" and goal.get("target_id") == target["id"] and _in_combat_position(attacker, target):
+				return true
+			for command in commands:
+				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("kind") == "attack_target" and command["goal"].get("target_id") == target["id"] and _in_combat_position(attacker, target):
+					return true
+			# Instant attacks/reactive defense keep their existing damage-ready rule.
+			if not _can_attack(attacker, target, false, at_tick):
+				continue
 			if goal.get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
 				return true
 			for reaction in natural_defense.produce(self, commands):
@@ -382,16 +392,19 @@ func _filter_mixed_orders(commands: Array) -> Array:
 			events.append({"type": "order_rejected", "unit_id": id, "reason": "contradictory_actions"})
 	return commands.filter(func(command): return command["type"] not in ["order", "special"] or not conflicted.has(command["unit_id"]))
 
-func _can_attack(attacker: Dictionary, defender: Dictionary, demolition: bool = false) -> bool:
+func _in_combat_position(attacker: Dictionary, defender: Dictionary, demolition: bool = false) -> bool:
 	if attacker.is_empty() or defender.is_empty() or attacker["owner"] == defender["owner"]:
 		return false
 	if attacker.get("sheltered", false) or (actions.active.has(attacker["id"]) and not demolition):
 		return false
-	if tick_count < int(attacker["ready_tick"]) or int(CARD_STATS[attacker["kind"]]["atk"]) <= 0:
+	if int(CARD_STATS[attacker["kind"]]["atk"]) <= 0:
 		return false
 	var a: Vector2i = attacker["cell"]
 	var b: Vector2i = defender["cell"]
 	return absi(a.x - b.x) + absi(a.y - b.y) == 1
+
+func _can_attack(attacker: Dictionary, defender: Dictionary, demolition: bool = false, at_tick: int = -1) -> bool:
+	return _in_combat_position(attacker, defender, demolition) and (tick_count if at_tick < 0 else at_tick) >= int(attacker["ready_tick"])
 
 func _check_end() -> void:
 	var a: int = int(players[0]["core_hp"])
