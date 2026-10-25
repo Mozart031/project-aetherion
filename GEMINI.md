@@ -83,6 +83,8 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 ## Próxima meta: prototipo interactivo
 
+La Fase 20.2 está autorizada en rama `codex/phase-20-2-tactical-combat`: Entrega A de destinos lejanos y ataques dirigidos, con pruebas antes de iniciar B. Entrega B provisional aprobada: defensa solo adyacente sin perseguir ni interrumpir órdenes/desplazamientos; menor ID como desempate técnico; barro duplica la entrada (6 a 12 ticks), sin daño ni esencia. Mantener configurables y separados ejecución de movimiento, órdenes explícitas y comportamiento natural. Ver `docs/PHASE_20_2.md`. No integrar sin revisión de TARS y validación visual. No añadir IA avanzada, habilidades, nuevas criaturas ni descubrimiento real del Núcleo.
+
 1. Selección de criatura por clic/toque y resaltado visible.
 2. Barras de vida e información básica.
 3. Movimiento validado en la simulación (ocupación, límites, reglas claras).
