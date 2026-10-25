@@ -49,7 +49,7 @@ func _initialize() -> void:
 	_check(sim.get_unit(2)["hp"] == 4 and sim.get_unit(1)["ready_tick"] == ready, "Persistent directed order respects cooldown")
 	_ticks(sim, 180)
 	_check(sim.get_unit(2).is_empty() and sim.orders.active.is_empty(), "Defeated target completes attack order")
-	_check(sim.players[1]["recovering"].has("turtle"), "Directed defeat retains recovery")
+	_check(sim.players[1]["recovering"].has(2), "Directed defeat retains individual recovery")
 	sim = _fixture()
 	sim.queue_target(0, 1, 2)
 	_ticks(sim, 8)

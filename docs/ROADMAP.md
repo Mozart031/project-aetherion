@@ -15,6 +15,8 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 
 ## Distribución visual aprobada
 
+**Fase 21 — Primera batalla jugable:** aprobada por TARS y validada visualmente por el propietario; integrada en `main` desde `2607c60587e7f8f46499539bed22d926158fd6ee`, rama `codex/phase-21-first-playable-battle` (base `ab75787`). [Estado y reglas](PHASE_21.md): escena integrada con cuatro categorías de cartas, despliegue, cuatro criaturas, terrenos, acciones temporizadas, refugio, valla y curación. Correcciones del propietario aplicadas: múltiples copias por especie y recuperación individual; intercambios/consumo de terreno sin recuperación artificial; refugio real y salida explícita. Doce suites y una batalla completa con economía real pasan en Godot 4.7.2; captura renderizada revisada por el implementador. Doce suites y arranque repetidos con éxito en Godot 4.7.2 antes de integrar. Sin conflictos ni cambios de jugabilidad adicionales; código integrado idéntico al de la rama aprobada. Pendiente prueba táctil Android.
+
 Fase 20.2 verificada visualmente por el propietario e integrada en `main` desde `e4aa4198c1497b8e1f051cab840a343cd97b37e7`: ver [combate táctico](PHASE_20_2.md). Entrega A registrada en `dcd7c52`: navegación ortogonal a destinos, persecución, ataques dirigidos y bloqueos/interrupciones, con siete suites y arranque aprobados antes de B. Entrega B implementada después: defensa adyacente sin interrumpir órdenes y barro de entrada ×2, con reglas provisionales confirmadas por el propietario y configuración separada. Ocho suites y arranque pasan en Godot 4.7.2. Demo táctica como escena de F5. Integración sin conflictos ni cambios adicionales de jugabilidad, tras repetir ocho suites y arranque en Godot 4.7.2. Prueba táctil Android pendiente. Núcleo rival sigue oculto, sin mecánica de descubrimiento.
 
 Isla del Caos utiliza **4 columnas × 8 filas** en `main`, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. Se conservan las dimensiones lógicas 8×4; el adaptador reversible se aplica al dibujo, selección y posiciones de barras. La demo mantiene jugador local 0; ambas perspectivas del adaptador se prueban sin añadir PvP. El movimiento básico aprobado también está integrado en `main`.
@@ -88,6 +90,6 @@ godot --headless --path . --quit-after 5
 - Validación táctil en dispositivo Android, distinta de los eventos sintéticos y la aprobación visual en Godot.
 - Futuras ventanas de ataque activo y retirada/intercambio: no se han introducido ni confundido con desplazamiento.
 - Mecánica real de descubrimiento del Núcleo, fuera del prototipo aprobado.
-- Identidad de cartas y recuperación cuando existen varias criaturas de la misma especie.
+- Balance posterior de especies, construcciones y acciones; identidad y recuperación independiente por copia ya implementadas en Fase 21.
 
-La Fase 20.1C básica está integrada con aprobación. La autorización posterior de Fase 20.2 permite navegación por destinos y defensa adyacente provisional en su rama; no autoriza IA avanzada, habilidades especiales ni integración sin revisión técnica y visual.
+Las Fases 20.1C, 20.2 y 21 están integradas con aprobación y verificación visual. No implementar Fase 22 hasta aprobar su alcance; no autorizar IA avanzada, descubrimiento real del Núcleo ni nuevas integraciones por inferencia.

@@ -9,7 +9,7 @@ func produce(sim, commands: Array) -> Array[Dictionary]:
 		return result
 	var explicit_units := {}
 	for command in commands:
-		if command["type"] in ["order", "move"]:
+		if command["type"] in ["order", "move", "special"]:
 			var unit: Dictionary = sim.get_unit(int(command["unit_id"]))
 			if not unit.is_empty() and unit["owner"] == command["player"]:
 				explicit_units[command["unit_id"]] = true
@@ -17,7 +17,9 @@ func produce(sim, commands: Array) -> Array[Dictionary]:
 			explicit_units[command["attacker"]] = true
 	for unit in sim.units:
 		var id: int = unit["id"]
-		if sim.orders.active.has(id) or sim.movement.active.has(id) or explicit_units.has(id):
+		if unit.get("sheltered", false):
+			continue
+		if sim.orders.active.has(id) or sim.movement.active.has(id) or sim.actions.active.has(id) or explicit_units.has(id):
 			continue
 		if int(sim.CARD_STATS[unit["kind"]]["atk"]) <= 0:
 			continue

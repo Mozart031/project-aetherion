@@ -14,7 +14,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 2. **Tablero:** 32 espacios, 16 por jugador. La distribución visual aprobada es vertical, **4 columnas × 8 filas**, con el rival arriba y el jugador local abajo. La simulación conserva por ahora sus coordenadas lógicas **8×4**; utilizar una transformación reversible entre ambos espacios en presentación, sin modificar la simulación para rotar la vista. Separar esta lógica de la representación tridimensional. Los terrenos pueden tener diferentes longitudes.
 3. **Núcleo oculto:** cada jugador lo coloca en su territorio; el rival debe descubrirlo y destruirlo. Señal de equilibrio hacia mitad de partida, aún por concretar.
 4. **Bloqueo bajo ataque:** no se permite retirar/intercambiar criatura, terreno o construcción mientras sea objetivo de un ataque activo. Se puede jugar en otras zonas.
-5. **Recuperación:** las cartas derrotadas por combate o desastre entran en cooldown; después vuelven a estar disponibles, **no reaparecen automáticamente**.
+5. **Recuperación por copia:** una carta derrotada por combate o desastre entra individualmente en cooldown; después vuelve disponible, **no reaparece automáticamente**. Múltiples criaturas de la misma especie tienen identidad y estado independientes; la derrota de una no bloquea a las otras. Distinguir recuperación, disponibilidad de copias y reutilización. Intercambios normales y uso de cartas no son automáticamente derrotas ni inician recuperación.
 6. **Cuatro pilas de cartas** abajo: criaturas, terrenos, construcciones y trucos; acceso al resto de cartas sin ocultar la batalla.
 7. **Esencia provisional:** inicio 4, máximo 8, +1 cada 3 segundos. Parámetros configurables para balance.
 8. **Partidas:** objetivo 5–8 minutos, límite de 10 minutos; final con desastres y última resistencia. Desempate previsto: vida del Núcleo, fuerza activa y control territorial.
@@ -32,8 +32,8 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Estado del repositorio al redactar este archivo
 
 - `project.godot`: Godot 4.7, renderer GL Compatibility.
-- `scenes/main.tscn`: escena principal.
-- `scripts/main.gd`: demo `Node2D` con cuadrícula y dos círculos, `auto_attack := true`.
+- `scenes/battle_demo.tscn`: escena integrada de Fase 21 aprobada y activa en `main`. Se conservan las escenas anteriores.
+- `scripts/main.gd`: vista compartida `Node2D` y demo técnica anterior; las demos de 20.2 y 21 desactivan su productor técnico de ataques automáticos y usan reglas de simulación.
 - `scripts/simulation.gd`: `AetherionSimulation`, 8×4, 20 ticks/s, invocación, ataque, esencia, daño, recuperación y fin de partida.
 - `main` incluye la prueba técnica de movimiento básico aprobada visualmente, descrita abajo. Todavía no hay tablero 3D, UI final de cartas, animaciones de personajes ni red. Verificar el código actual antes de cada tarea: este estado puede cambiar.
 
@@ -82,6 +82,10 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 - Decisión adicional del propietario: mantener oculto el Núcleo rival en el prototipo; rechazar ataques mientras no esté descubierto. El estado descubierto se prueba únicamente con fixtures. No implementar aún una mecánica de descubrimiento ni revelar al entrar en su celda.
 
 ## Próxima meta: prototipo interactivo
+
+La Fase 21 «Primera batalla jugable» fue aprobada por TARS y por el propietario tras validación visual en Godot e integrada en `main` desde `codex/phase-21-first-playable-battle`, commit de funcionalidad `2607c60587e7f8f46499539bed22d926158fd6ee` (base `ab75787`). Cuatro espacios de cartas, cerdo/jabalí/caballo/gólem, maizal/cueva/barro, valla y curación provisional; órdenes contextuales y acciones con preparación/efectos visibles. Doce suites y escenario completo con economía real aprobados en Godot 4.7.2. Las doce suites y el arranque se repitieron con éxito antes de la integración, sin conflictos ni cambios adicionales de jugabilidad. Ver `docs/PHASE_21.md` para reglas exactas, pruebas y límites.
+
+Correcciones explícitas del propietario para 21: tres copias configurables por especie, varias activas simultáneamente, recuperación por instancia; ningún cooldown genérico de 60 ticks tras usar terrenos/construcciones/trucos; valla destruida recupera en 120 ticks configurables; curación reutilizable pagando esencia; intercambio normal y maizal consumido liberan disponibilidad inmediatamente. Cueva con entrada/salida de seis ticks, daño recibido reducido en uno con mínimo uno, sin atacar dentro ni invulnerabilidad; una orden explícita permite salir. Acciones de especie con preparación y consecuencias observables, separadas de instintos y navegación. Mantener prioridad explícita y Núcleo oculto; sin 3D final, PvP ni IA avanzada.
 
 La Fase 20.2 fue verificada visualmente por el propietario e integrada en `main` desde `codex/phase-20-2-tactical-combat`, commit `e4aa4198c1497b8e1f051cab840a343cd97b37e7`: Entrega A de destinos lejanos y ataques dirigidos (`dcd7c52`), con siete suites y arranque aprobados antes de iniciar B. Entrega B provisional aprobada e implementada: defensa solo adyacente sin perseguir ni interrumpir órdenes/desplazamientos; menor ID como desempate técnico, no personalidad definitiva; barro duplica la entrada (6 a 12 ticks), sin daño ni esencia. Configurables `natural_defense.enabled`, `terrain.mud_multiplier` y duración base; ejecución de movimiento, órdenes explícitas y comportamiento natural separados. Ocho suites y arranque aprobados en Godot 4.7.2. F5 abre la demo táctica con defensa y barro; la demo original se conserva. Ver `docs/PHASE_20_2.md`. Integración realizada tras confirmación visual del propietario y ocho suites más arranque aprobados nuevamente en Godot 4.7.2. No añadir IA avanzada, habilidades, nuevas criaturas ni descubrimiento real del Núcleo.
 
