@@ -53,7 +53,21 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 **Durante:** implementar un incremento funcional; distinguir hechos, supuestos y propuestas; respetar las reglas acordadas.
 
-**Después:** enumerar archivos modificados, pruebas realizadas, errores y pendientes. Preparar un commit descriptivo; hacer `git push` cuando el usuario lo autorice. Compartir rama/commit para revisión cruzada de ChatGPT.
+**Después:** registrar el avance en `docs/ROADMAP.md` y comunicar únicamente resultados esenciales y commits. Publicar con commit descriptivo y push los cambios dentro del alcance previamente aprobado una vez superadas las pruebas y la validación correspondiente en Godot. Consultar antes de ampliar el alcance, introducir riesgo significativo, alterar reglas del juego, eliminar archivos o añadir dependencias.
+
+## Colaboración y continuidad
+
+- Codex es el implementador principal; ChatGPT Work apoya tareas extensas; Gemini en Antigravity realiza revisiones técnicas independientes cuando corresponda; TARS supervisa arquitectura y reglas; Godot es el entorno de validación.
+- Conservar el trabajo realizado: no reiniciar fases ni repetir incrementos completados. Verificar Git local y remoto antes de sincronizar.
+- GitHub es el punto de sincronización con TARS. Mantener `main` estable y utilizar ramas de funcionalidad `codex/` para cambios importantes; integrar únicamente cambios aprobados y validados.
+- Trabajar en incrementos pequeños con pruebas automatizadas y validación en Godot 4.7.
+- Antes de editar, coordinar los archivos asignados si Gemini tiene una revisión o implementación activa. No editar simultáneamente los mismos archivos que Gemini.
+- `GEMINI.md` conserva las reglas; `docs/ROADMAP.md` registra hitos, estado, validación y commits. Los objetivos futuros no autorizan por sí solos su implementación.
+
+## Avance confirmado
+
+- Fase 20.1A completada y publicada en `main`: `5319303d62698a48f1471b69c2b2eb91775ad5b2`. Corrección de la expectativa de HP del jabalí y pruebas de simultaneidad, cooldowns y comandos duplicados; validadas en Godot 4.7.2. Sin cambios en reglas, arquitectura, escenas ni interfaces.
+- Próximo objetivo: Fase 20.1B, selección de criaturas y barras de vida. No iniciarla durante la actualización documental; primero confirmar la sincronización del repositorio.
 
 ## Próxima meta: prototipo interactivo
 
