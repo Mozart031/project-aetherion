@@ -48,7 +48,7 @@ func cancel(id: int, sim, interrupt_action: bool = true) -> void:
 func _explain(id: int, reason: String, sim) -> void:
 	if explanations.get(id, "") != reason:
 		explanations[id] = reason
-		sim.events.append({"type": "natural_state", "unit_id": id, "reason": reason})
+		sim.events.append({"type": "natural_state", "unit_id": id, "player": sim.get_unit(id)["owner"], "reason": reason})
 
 func ingest(commands: Array, sim) -> void:
 	explicit_this_tick.clear()
@@ -75,9 +75,9 @@ func ingest(commands: Array, sim) -> void:
 			var value: bool = controls[id].keys()[0]
 			sim.get_unit(id)["ecology_enabled"] = value
 			explicit_this_tick[id] = true
-			sim.events.append({"type": "ecology_changed", "unit_id": id, "enabled": value})
+			sim.events.append({"type": "ecology_changed", "unit_id": id, "player": sim.get_unit(id)["owner"], "enabled": value})
 		else:
-			sim.events.append({"type": "ecology_rejected", "unit_id": id})
+			sim.events.append({"type": "ecology_rejected", "unit_id": id, "player": sim.get_unit(id)["owner"]})
 	for id in explicit_this_tick:
 		cancel(id, sim)
 

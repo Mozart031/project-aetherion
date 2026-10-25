@@ -87,7 +87,7 @@ func _after_sim_step() -> void:
 		# A fixed rival order, not a strategist or mandatory species advance.
 		sim.queue_destination(1, 1, Vector2i(4, 0))
 	signals_view.consume(sim.get_player_view(LOCAL_PLAYER))
-	for event in sim.events:
+	for event in sim.get_player_view(LOCAL_PLAYER)["events"]:
 		if event.get("unit_id", -1) != selected_unit_id:
 			continue
 		if event["type"] == "order_completed":

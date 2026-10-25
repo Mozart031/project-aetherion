@@ -76,6 +76,9 @@ func _cycle(category: String) -> void:
 	if placement.draft.get("category") == category:
 		placement.cancel()
 		preserved_selection = -1
+	elif placement.draft.is_empty() and placement.message != "match_finished":
+		# Navigation abandons a stale failure, not an error in another live draft.
+		placement.message = ""
 	stacks.cycle(category)
 	panel.close_info(category)
 	_preview_key = ""
