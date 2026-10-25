@@ -10,11 +10,23 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 | Fase 20.1A: regresiones de combate | Corregir HP esperado del jabalí; probar ataques y derrotas simultáneas, cooldowns y comandos duplicados. | Completada y publicada en `main` en `5319303d62698a48f1471b69c2b2eb91775ad5b2`, incluyendo `GEMINI.md`. Pruebas headless aprobadas en Godot 4.7.2. |
 | Sincronización documental | Incorporar la metodología de colaboración y esta hoja de ruta; confirmar Git y conservar el trabajo existente. | Documentación actualizada; base local y remota confirmada en `5319303` y suite aprobada en Godot 4.7.2. El commit y la confirmación de publicación se comunican al entregar; no se incluye código de la Fase 20.1B. |
 | Fase 20.1B: selección y vida | Selección de criaturas propias por clic/toque, resaltado, barras de vida, limpieza tras derrota y coordenadas adaptadas a la ventana. | Aprobada por el propietario tras pruebas visuales en Godot. Integración en `main` de `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`; pruebas de presentación, combate y arranque repetidas en Godot 4.7.2. Simulación intacta. |
-| Fase 20.1C: movimiento interactivo y adaptación vertical | Planificar la conversión visual 4×8, entrada reversible y movimiento autorizado por simulación. | [Propuesta técnica](PHASE_20_1C.md) preparada. Distribución visual aprobada; transformación aún sin implementar. Movimiento y reglas pendientes de aprobación. |
+| Fase 20.1C, primera parte: adaptación vertical | Conversión visual 4×8 y entrada reversible, conservando lógica 8×4 y combate. | Implementada en `codex/phase-20-1c-vertical-board`, pendiente de revisión e integración. Pruebas de coordenadas, presentación, combate y arranque aprobadas en Godot 4.7.2. Revisión visual pendiente. |
+| Fase 20.1C, movimiento interactivo | Movimiento autorizado por simulación. | [Propuesta técnica](PHASE_20_1C.md); reglas pendientes de aprobación. Sin implementación de movimiento. |
 
 ## Distribución visual aprobada
 
-Isla del Caos utilizará **4 columnas × 8 filas**, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. Se conserva por ahora la simulación lógica 8×4; la Fase 20.1C planifica una transformación reversible en presentación para dibujo, selección, barras y futuros destinos de movimiento. La demo integrada de la Fase 20.1B todavía utiliza dibujo 8×4. Esta decisión no implementa ni autoriza reglas de movimiento.
+Isla del Caos utiliza **4 columnas × 8 filas** en la rama de revisión de la primera parte de la Fase 20.1C, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. La simulación lógica 8×4 permanece intacta; el adaptador reversible se aplica al dibujo, selección y posiciones de barras. La demo mantiene jugador local 0; ambas perspectivas del adaptador se prueban sin añadir PvP. `main` conserva la presentación anterior hasta aprobar la integración. No se implementa movimiento.
+
+### Validación de la adaptación vertical
+
+```text
+godot --headless --path . --script res://tests/board_coordinates_smoke.gd
+godot --headless --path . --script res://tests/presentation_smoke.gd
+godot --headless --path . --script res://tests/simulation_smoke.gd
+godot --headless --path . --quit-after 5
+```
+
+Las cuatro comprobaciones pasan en Godot 4.7.2. Se cubren las 32 celdas en ambas perspectivas, inversas, unicidad, límites, 16 espacios por mitad y distancias de todos los pares; además, selección y entrada tras redimensionar, aspecto 4:8, rival arriba/local abajo, esquinas, exclusión de bordes, transformación del canvas, vida y limpieza tras derrota. La simulación, sus pruebas y las escenas no se modifican. Pendiente revisión visual en Godot y prueba táctil en Android. La ventana se puede redimensionar; este incremento no modifica la configuración de exportación u orientación Android.
 
 ## Objetivos posteriores ya registrados
 

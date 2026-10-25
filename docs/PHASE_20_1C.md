@@ -1,6 +1,6 @@
 # Fase 20.1C — propuesta técnica
 
-Estado: planificación, sin implementación de movimiento ni transformación visual. La Fase 20.1B está aprobada tras pruebas visuales; su simulación permanece intacta. Las recomendaciones de movimiento de este documento necesitan aprobación explícita de TARS y del propietario antes de implementarse.
+Estado: primera parte visual implementada en `codex/phase-20-1c-vertical-board`, pendiente de revisión e integración. Adaptador reversible, dibujo y selección 4×8 validados con pruebas headless en Godot 4.7.2; revisión visual y toque en Android pendientes. La Fase 20.1B está aprobada tras pruebas visuales; su simulación permanece intacta. No hay movimiento implementado: las recomendaciones de movimiento de este documento necesitan aprobación explícita de TARS y del propietario antes de implementarse.
 
 ## Decisiones aprobadas e invariantes
 
@@ -10,7 +10,7 @@ Estado: planificación, sin implementación de movimiento ni transformación vis
 - Conservar Núcleos ocultos y la prohibición de retirar/intercambiar objetivos bajo ataque activo. No reinterpretar el movimiento como retirada ni equiparar automáticamente el cooldown con un ataque activo.
 - La mesa 3D sigue siendo la dirección final; la vista 2D sirve para validar interacción.
 
-## Transformación lógica y visual propuesta
+## Transformación lógica y visual implementada en la rama de revisión
 
 Usar un adaptador puro de presentación, con coordenadas lógicas `(x, y)` en `[0..7] × [0..3]` y visuales `(u, v)` en `[0..3] × [0..7]`. El origen visual está arriba a la izquierda; `v` crece hacia abajo.
 
@@ -19,7 +19,7 @@ Usar un adaptador puro de presentación, con coordenadas lógicas `(x, y)` en `[
 | Jugador 0 | `u = y`, `v = 7 - x` | `x = 7 - v`, `y = u` | `x = 0..3` pasa a `v = 4..7` |
 | Jugador 1 | `u = 3 - y`, `v = x` | `x = v`, `y = 3 - u` | `x = 4..7` pasa a `v = 4..7` |
 
-Es una rotación con inversa exacta: conserva vecindad ortogonal y distancias Manhattan. Ejemplo desde jugador 0: el jabalí lógico `(3, 1)` aparece en `(1, 4)` y la tortuga `(4, 1)` en `(1, 3)`, enfrentados en la frontera. La perspectiva de jugador 1 solo se probaría como transformación; no añade un modo de juego ni PvP.
+Es una rotación con inversa exacta: conserva vecindad ortogonal y distancias Manhattan. Ejemplo desde jugador 0: el jabalí lógico `(3, 1)` aparece en `(1, 4)` y la tortuga `(4, 1)` en `(1, 3)`, enfrentados en la frontera. La perspectiva de jugador 1 solo se prueba como transformación; la demo mantiene jugador local 0 y no añade un modo de juego ni PvP.
 
 Flujo de entrada: posición del evento en viewport → transformación inversa del canvas → posición local → celda visual con geometría compartida → celda lógica → selección o intención de movimiento. Fuera del tablero devuelve un resultado inválido antes de convertir. Flujo de dibujo: estado lógico → celda visual → centro de miniatura, aro y barra de vida. No rotar ni escribir el estado de simulación.
 
