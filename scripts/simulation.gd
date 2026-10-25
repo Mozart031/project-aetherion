@@ -19,6 +19,23 @@ const MAX_ESSENCE := 8
 const ESSENCE_REGEN_TICKS := 60
 const CORE_MAX_HP := 12
 const MATCH_LIMIT_TICKS := 12000
+## Observer contract: unknown events/fields are never public by default.
+const PUBLIC_EVENTS := {
+	"summoned": ["unit_id", "kind", "owner"],
+	"card_played": ["player", "card", "cell"],
+	"attack_accepted": ["unit_id", "target_id", "kind", "from_cell", "cell", "amount", "action"],
+	"charge_hit": ["unit_id", "cell"],
+	"damaged": ["unit_id", "amount", "cell"],
+	"building_damaged": ["unit_id", "amount", "cell"],
+	"defeated": ["unit_id", "kind", "cell"],
+	"building_defeated": ["unit_id", "cell"],
+	"healed": ["unit_id", "cell", "amount"],
+	"move_started": ["unit_id"], "move_arrived": ["unit_id"],
+	"special_started": ["unit_id", "kind", "cell", "end_tick"],
+	"special_completed": ["unit_id", "kind", "cell", "amount"],
+	"special_cancelled": ["unit_id"], "match_end": ["winner"]
+}
+const PRIVATE_EVENTS := ["card_result", "card_rejected", "card_recovered", "order_accepted", "order_rejected", "order_status", "order_stopped", "order_completed", "natural_state", "ecology_changed", "ecology_rejected", "special_rejected", "move_rejected"]
 const CARD_STATS := {
 	"pig": {"hp": 4, "atk": 1, "armor": 0, "interval": 40, "cost": 2, "recovery": 240},
 	"horse": {"hp": 4, "atk": 2, "armor": 0, "interval": 40, "cost": 3, "recovery": 240},
@@ -209,19 +226,56 @@ func can_move(player: int, unit_id: int, destination: Vector2i) -> bool:
 func get_motion(unit_id: int) -> Dictionary:
 	return movement.active.get(unit_id, {}).duplicate(true)
 
+func _project_fields(value: Dictionary, fields: Array) -> Dictionary:
+	var result := {}
+	for field in fields:
+		if value.has(field):
+			result[field] = value[field]
+	return result.duplicate(true)
+
+func _event_for(event: Dictionary, observer: int) -> Dictionary:
+	var type: String = event.get("type", "")
+	if type in PRIVATE_EVENTS:
+		return event.duplicate(true) if event.get("player", -1) == observer else {}
+	if PUBLIC_EVENTS.has(type):
+		var result := _project_fields(event, PUBLIC_EVENTS[type])
+		result["type"] = type
+		return result
+	return {}
+
 func get_player_view(observer: int) -> Dictionary:
 	if observer not in [0, 1]:
 		return {}
-	var visible_players := players.duplicate(true)
-	for player in visible_players:
-		if not player["core_known_to"][observer]:
-			player.erase("core_cell")
-		player.erase("core_known_to")
+	var visible_players: Array[Dictionary] = []
+	for owner in range(players.size()):
+		var player := _project_fields(players[owner], ["core_hp", "essence", "recovering"] if owner == observer else ["core_hp"])
+		if players[owner]["core_known_to"][observer]:
+			player["core_cell"] = players[owner]["core_cell"]
+		visible_players.append(player)
+	var visible_units: Array[Dictionary] = []
+	for unit in units:
+		visible_units.append(unit.duplicate(true) if unit["owner"] == observer else _project_fields(unit, ["id", "owner", "kind", "cell", "hp", "sheltered", "charged"]))
+	var visible_actions := {}
+	for id in actions.active:
+		visible_actions[id] = actions.active[id].duplicate(true) if get_unit(id).get("owner") == observer else _project_fields(actions.active[id], ["kind", "cell", "start_tick", "end_tick"])
+	var visible_motions := {}
+	for id in movement.active:
+		visible_motions[id] = _project_fields(movement.active[id], ["from", "to", "start_tick", "end_tick"])
+	var visible_buildings: Array[Dictionary] = []
+	for building in cards.buildings:
+		visible_buildings.append(_project_fields(building, ["id", "kind", "owner", "cell", "hp", "max_hp"]))
+	var visible_terrain_owners := {}
+	for cell in terrain.cells:
+		visible_terrain_owners[cell] = cards.terrain_owners.get(cell, -1)
 	var card_states := {}
 	for kind in BattleCards.Catalog.CARDS:
 		card_states[kind] = cards.state(observer, kind, self)
-	var observed_events := events.filter(func(event): return event["type"] != "card_result" or event["player"] == observer)
-	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "buildings": cards.buildings.duplicate(true), "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": movement.active.duplicate(true), "actions": actions.active.duplicate(true), "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": observed_events.duplicate(true), "finished": finished, "winner": winner}
+	var observed_events: Array[Dictionary] = []
+	for event in events:
+		var projected := _event_for(event, observer)
+		if not projected.is_empty():
+			observed_events.append(projected)
+	return {"tick": tick_count, "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "terrain_owners": visible_terrain_owners, "events": observed_events, "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
@@ -389,7 +443,7 @@ func _filter_mixed_orders(commands: Array) -> Array:
 	for id in ids:
 		if intent_types[id].size() > 1:
 			conflicted[id] = true
-			events.append({"type": "order_rejected", "unit_id": id, "reason": "contradictory_actions"})
+			events.append({"type": "order_rejected", "unit_id": id, "player": get_unit(id)["owner"], "reason": "contradictory_actions"})
 	return commands.filter(func(command): return command["type"] not in ["order", "special"] or not conflicted.has(command["unit_id"]))
 
 func _in_combat_position(attacker: Dictionary, defender: Dictionary, demolition: bool = false) -> bool:

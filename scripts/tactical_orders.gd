@@ -50,7 +50,7 @@ func ingest(commands: Array, sim) -> void:
 	ids.sort()
 	for id in ids:
 		if groups[id].size() != 1:
-			sim.events.append({"type": "order_rejected", "unit_id": id, "reason": "contradictory"})
+			sim.events.append({"type": "order_rejected", "unit_id": id, "player": sim.get_unit(id)["owner"], "reason": "contradictory"})
 			continue
 		var goal: Dictionary = groups[id][0].duplicate(true)
 		var unit: Dictionary = sim.get_unit(id)
@@ -71,12 +71,12 @@ func ingest(commands: Array, sim) -> void:
 				sim.natural.cancel(id, sim)
 				sim.actions.interrupt(id, sim)
 				active.erase(id)
-				sim.events.append({"type": "order_stopped", "unit_id": id})
+				sim.events.append({"type": "order_stopped", "unit_id": id, "player": unit["owner"]})
 				continue
 			_:
 				valid = false
 		if not valid:
-			sim.events.append({"type": "order_rejected", "unit_id": id, "reason": "invalid_goal"})
+			sim.events.append({"type": "order_rejected", "unit_id": id, "player": unit["owner"], "reason": "invalid_goal"})
 			continue
 		if active.has(id) and active[id]["goal"] == goal:
 			continue
@@ -85,11 +85,11 @@ func ingest(commands: Array, sim) -> void:
 		if goal["kind"] != "hold" and not (goal["kind"] == "act_at" and goal["action"] == "leave"):
 			sim.actions.ensure_exit(id, sim)
 		active[id] = {"goal": goal, "status": "pending", "path": []}
-		sim.events.append({"type": "order_accepted", "unit_id": id})
+		sim.events.append({"type": "order_accepted", "unit_id": id, "player": unit["owner"]})
 
 func _status(sim, id: int, value: String, path: Array = []) -> void:
 	if active[id]["status"] != value:
-		sim.events.append({"type": "order_status", "unit_id": id, "status": value, "source": source})
+		sim.events.append({"type": "order_status", "unit_id": id, "player": sim.get_unit(id)["owner"], "status": value, "source": source})
 	active[id]["status"] = value
 	active[id]["path"] = path
 
@@ -119,12 +119,12 @@ func produce(sim) -> Array[Dictionary]:
 			if active[id].get("action_started", false):
 				var outcome: Dictionary = sim.actions.outcomes.get(id, {})
 				active.erase(id)
-				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "action_finished" if outcome.get("completed", false) else "action_cancelled", "source": source})
+				sim.events.append({"type": "order_completed", "unit_id": id, "player": unit["owner"], "reason": "action_finished" if outcome.get("completed", false) else "action_cancelled", "source": source})
 				continue
 			var option: Dictionary = sim.actions.plan(unit, str(goal["action"]), goal["cell"], int(goal.get("target_id", -1)), sim)
 			if not option["enabled"]:
 				active.erase(id)
-				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "resource_lost", "source": source})
+				sim.events.append({"type": "order_completed", "unit_id": id, "player": unit["owner"], "reason": "resource_lost", "source": source})
 				continue
 			var reached: bool = _distance(unit["cell"], option["cell"]) == 1 if goal["action"] == "demolish" else unit["cell"] == option["cell"]
 			if reached and not sim.movement.active.has(id):
@@ -142,7 +142,7 @@ func produce(sim) -> Array[Dictionary]:
 			var target: Dictionary = sim.get_target(int(goal["target_id"]))
 			if target.is_empty():
 				active.erase(id)
-				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "target_defeated"})
+				sim.events.append({"type": "order_completed", "unit_id": id, "player": unit["owner"], "reason": "target_defeated"})
 				continue
 			if _distance(unit["cell"], target["cell"]) == 1:
 				_status(sim, id, "attacking")
@@ -154,7 +154,7 @@ func produce(sim) -> Array[Dictionary]:
 			goals.append(goal["cell"])
 			if unit["cell"] == goal["cell"] and not sim.movement.active.has(id):
 				active.erase(id)
-				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "destination_reached"})
+				sim.events.append({"type": "order_completed", "unit_id": id, "player": unit["owner"], "reason": "destination_reached"})
 				continue
 		if sim.movement.active.has(id):
 			_status(sim, id, "moving", active[id]["path"])
@@ -189,7 +189,7 @@ func cleanup(sim) -> void:
 			active.erase(id)
 		elif active[id]["goal"]["kind"] == "attack_target" and sim.get_target(int(active[id]["goal"]["target_id"])).is_empty():
 			active.erase(id)
-			sim.events.append({"type": "order_completed", "unit_id": id, "reason": "target_defeated"})
+			sim.events.append({"type": "order_completed", "unit_id": id, "player": sim.get_unit(id)["owner"], "reason": "target_defeated"})
 
 func view_for(player: int, units: Array[Dictionary]) -> Dictionary:
 	var result := {}

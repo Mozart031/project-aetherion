@@ -73,5 +73,5 @@ func resolve(commands: Array, units: Array[Dictionary], tick: int, duration: int
 			reservations[destination] = id
 			result.append({"type": "move_started", "unit_id": id})
 		else:
-			result.append({"type": "move_rejected", "unit_id": id})
+			result.append({"type": "move_rejected", "unit_id": id, "player": live[id]["owner"]})
 	return result

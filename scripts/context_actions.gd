@@ -113,7 +113,7 @@ func ingest(commands: Array, sim) -> void:
 	for id in ids:
 		var unit: Dictionary = sim.get_unit(id)
 		if groups[id].size() != 1 or not can_start(unit, str(groups[id][0]["kind"]), sim, int(groups[id][0]["target_id"])):
-			sim.events.append({"type": "special_rejected", "unit_id": id})
+			sim.events.append({"type": "special_rejected", "unit_id": id, "player": unit["owner"]})
 			continue
 		var kind: String = groups[id][0]["kind"]
 		start(unit, kind, sim, int(groups[id][0]["target_id"]))
