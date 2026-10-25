@@ -4,12 +4,15 @@ extends RefCounted
 var active: Dictionary = {}
 var prepare_ticks := 6
 var cooldown_ticks := 60
+var outcomes: Dictionary = {}
 
 func reset() -> void:
 	active.clear()
+	outcomes.clear()
 
 func interrupt(id: int, sim) -> void:
 	if active.has(id):
+		outcomes[id] = {"kind": active[id]["kind"], "tick": sim.tick_count, "completed": false, "source": active[id].get("source", "explicit")}
 		active.erase(id)
 		sim.events.append({"type": "special_cancelled", "unit_id": id})
 
@@ -44,6 +47,53 @@ func can_start(unit: Dictionary, kind: String, sim, target_id: int = -1) -> bool
 			return unit["kind"] == "golem" and not target.is_empty() and sim._can_attack(unit, target)
 	return false
 
+func plan(unit: Dictionary, kind: String, cell: Vector2i, target_id: int, sim) -> Dictionary:
+	var result := {"kind": kind, "cell": cell, "target_id": target_id, "enabled": false, "reason": "Acción incompatible", "ready_in": 0}
+	if unit.is_empty() or sim.finished or cell.x < 0 or cell.x >= 8 or cell.y < 0 or cell.y >= 4:
+		return result
+	var ground: String = sim.terrain.cells.get(cell, "")
+	var missing: int = int(sim.CARD_STATS[unit["kind"]]["hp"]) - int(unit["hp"])
+	match kind:
+		"roll":
+			result["enabled"] = unit["kind"] == "pig" and ground == "mud" and missing > 0
+			result["reason"] = "Necesita barro y vida perdida"
+		"forage":
+			result["enabled"] = unit["kind"] == "horse" and ground == "cornfield" and missing > 0
+			result["reason"] = "Necesita maizal y vida perdida"
+		"enter":
+			result["enabled"] = ground == "cave" and not (cell == unit["cell"] and unit.get("sheltered", false))
+			result["reason"] = "Necesita una cueva para entrar"
+		"leave":
+			result["enabled"] = unit.get("sheltered", false) and cell == unit["cell"]
+			result["reason"] = "La criatura no está refugiada"
+		"charge":
+			result["enabled"] = unit["kind"] == "boar" and cell == unit["cell"] and not unit.get("charged", false)
+			result["reason"] = "Embestida ya preparada o especie incompatible"
+		"demolish":
+			var target: Dictionary = sim.cards.get_building(target_id)
+			result["enabled"] = unit["kind"] == "golem" and not target.is_empty() and target["owner"] != unit["owner"]
+			result["reason"] = "Elige una construcción rival"
+			if not target.is_empty():
+				result["cell"] = target["cell"]
+	if kind not in ["enter", "leave"]:
+		result["ready_in"] = maxi(0, int(unit.get("special_ready_tick", 0)) - sim.tick_count)
+	if result["enabled"]:
+		result["reason"] = "Disponible" if result["ready_in"] == 0 else "Esperará el cooldown al llegar"
+	return result
+
+func start(unit: Dictionary, kind: String, sim, target_id: int = -1, source: String = "explicit", keep_order: bool = false) -> bool:
+	if not can_start(unit, kind, sim, target_id):
+		return false
+	var id: int = unit["id"]
+	if not keep_order:
+		sim.orders.active.erase(id)
+	if kind not in ["enter", "leave"]:
+		unit["special_ready_tick"] = sim.tick_count + maxi(1, cooldown_ticks)
+	outcomes.erase(id)
+	active[id] = {"kind": kind, "cell": unit["cell"], "start_tick": sim.tick_count, "end_tick": sim.tick_count + maxi(1, prepare_ticks), "target_id": target_id, "source": source}
+	sim.events.append({"type": "special_started", "unit_id": id, "kind": kind, "cell": unit["cell"], "source": source, "end_tick": active[id]["end_tick"]})
+	return true
+
 func ingest(commands: Array, sim) -> void:
 	var groups := {}
 	for command in commands:
@@ -66,11 +116,7 @@ func ingest(commands: Array, sim) -> void:
 			sim.events.append({"type": "special_rejected", "unit_id": id})
 			continue
 		var kind: String = groups[id][0]["kind"]
-		sim.orders.active.erase(id)
-		if kind not in ["enter", "leave"]:
-			unit["special_ready_tick"] = sim.tick_count + maxi(1, cooldown_ticks)
-		active[id] = {"kind": kind, "cell": unit["cell"], "start_tick": sim.tick_count, "end_tick": sim.tick_count + maxi(1, prepare_ticks), "target_id": groups[id][0]["target_id"]}
-		sim.events.append({"type": "special_started", "unit_id": id, "kind": kind, "cell": unit["cell"]})
+		start(unit, kind, sim, int(groups[id][0]["target_id"]))
 
 func produce_damage(sim) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -79,7 +125,7 @@ func produce_damage(sim) -> Array[Dictionary]:
 	for id in ids:
 		var action: Dictionary = active[id]
 		if action["kind"] == "demolish" and sim.tick_count >= int(action["end_tick"]):
-			result.append({"type": "attack", "attacker": id, "defender": action["target_id"], "demolition": true})
+			result.append({"type": "attack", "attacker": id, "defender": action["target_id"], "demolition": true, "source": action.get("source", "explicit")})
 	return result
 
 func advance(sim) -> void:
@@ -89,6 +135,7 @@ func advance(sim) -> void:
 		var unit: Dictionary = sim.get_unit(id)
 		if unit.is_empty():
 			active.erase(id)
+			outcomes.erase(id)
 			continue
 		var action: Dictionary = active[id]
 		if action["kind"] == "demolish" and sim.cards.get_building(int(action["target_id"])).is_empty() and not action.get("impact_accepted", false):
@@ -106,6 +153,7 @@ func advance(sim) -> void:
 			unit["sheltered"] = false
 		elif kind == "demolish":
 			if not action.get("impact_accepted", false):
+				outcomes[id] = {"kind": kind, "tick": sim.tick_count, "completed": false}
 				sim.events.append({"type": "special_cancelled", "unit_id": id})
 				continue
 		elif kind == "charge":
@@ -116,6 +164,11 @@ func advance(sim) -> void:
 			unit["hp"] = mini(int(sim.CARD_STATS[unit["kind"]]["hp"]), int(unit["hp"]) + 2)
 			sim.terrain.cells.erase(unit["cell"])
 		else:
+			outcomes[id] = {"kind": kind, "tick": sim.tick_count, "completed": false}
 			sim.events.append({"type": "special_cancelled", "unit_id": id})
 			continue
-		sim.events.append({"type": "special_completed", "unit_id": id, "kind": kind, "cell": unit["cell"], "amount": int(unit["hp"]) - previous_hp})
+		outcomes[id] = {"kind": kind, "tick": sim.tick_count, "completed": true, "source": action.get("source", "explicit")}
+		sim.events.append({"type": "special_completed", "unit_id": id, "kind": kind, "cell": unit["cell"], "amount": int(unit["hp"]) - previous_hp, "source": action.get("source", "explicit")})
+	for id in outcomes.keys():
+		if sim.get_unit(id).is_empty():
+			outcomes.erase(id)
