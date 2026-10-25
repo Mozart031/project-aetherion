@@ -68,7 +68,7 @@ func _build_ui() -> void:
 	dock.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	dock.offset_left = 12
 	dock.offset_right = -12
-	dock.offset_top = -218
+	dock.offset_top = -_dock_height()
 	dock.offset_bottom = -12
 	root.add_child(dock)
 	var categories := HBoxContainer.new()
@@ -91,10 +91,17 @@ func _build_ui() -> void:
 	controls.add_child(refuge_button)
 	controls.add_child(_button("Detener", func(): sim.queue_stop(LOCAL_PLAYER, selected_unit_id)))
 	controls.add_child(_button("Reiniciar", _start_battle))
+	_extend_controls(dock)
 	var hint := _label(12)
 	hint.text = "Azul: elegir · Celda: ir · Rival/valla: atacar\nMaizal: comer · Barro: revolcarse · Cueva: entrar/salir"
 	dock.add_child(hint)
 	_choose_category("creature")
+
+func _dock_height() -> float:
+	return 218.0
+
+func _extend_controls(_dock: VBoxContainer) -> void:
+	pass
 
 func _choose_category(value: String) -> void:
 	category = value
@@ -170,6 +177,9 @@ func _refuge() -> void:
 	if not unit.is_empty():
 		sim.queue_special(LOCAL_PLAYER, selected_unit_id, "leave" if unit.get("sheltered", false) else "enter")
 
+func _reports_event(_event: Dictionary) -> bool:
+	return true
+
 func _after_sim_step() -> void:
 	for event in sim.get_player_view(LOCAL_PLAYER)["events"]:
 		var type: String = event["type"]
@@ -179,6 +189,8 @@ func _after_sim_step() -> void:
 			var effect: Dictionary = event.duplicate(true)
 			effect["expires"] = sim.tick_count + 24
 			feedback.append(effect)
+		if not _reports_event(event):
+			continue
 		if type == "card_rejected" and event["player"] == LOCAL_PLAYER:
 			last_message = "No se pudo jugar: " + str({"invalid_card": "carta no válida.", "unavailable": "falta esencia o copias libres.", "invalid_target": "elige una criatura propia herida.", "own_territory_required": "usa tus filas inferiores.", "occupied": "espacio ocupado o reservado.", "refuge_occupied": "haz salir primero del refugio.", "terrain_locked_or_same": "terreno igual o bajo ataque."}.get(event["reason"], "revisa el destino."))
 		elif type == "special_rejected":

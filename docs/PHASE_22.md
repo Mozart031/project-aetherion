@@ -1,16 +1,16 @@
-# Fase 22 — propuesta de dinamismo y profundidad de batalla
+# Fase 22 — dinamismo y profundidad de batalla
 
-**Estado: propuesta pendiente de aprobación de alcance. No implementada.** Base: Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`, aprobada por TARS y validada visualmente por el propietario. Doce suites y arranque verificados en Godot 4.7.2; la integración conserva el código de jugabilidad aprobado.
+**Estado: ambos bloques autorizados por TARS y Dirección Creativa e implementados en `codex/phase-22-battle-depth`, desde `main` `1c740d6`. No integrados; pendientes de revisión técnica y validación visual del propietario.** Base: Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`. Se mantienen estadísticas, economía y resolución simultánea aprobadas.
 
 ## Resultado y forma de entrega
 
 Una batalla de mesa viva: criaturas que expresan su especie y reaccionan a oportunidades locales, mientras el jugador conserva autoridad sobre destinos, ataques y acciones. Sin marcha obligatoria al enemigo. Mantener cuatro especies, tres terrenos y la valla actuales, vista vertical 4×8 y simulación lógica 8×4 a 20 Hz.
 
-Entregar **dos bloques funcionales grandes**, cada uno con escenario integrado, pruebas y documentación. La división permite validar resultados completos, sin pedir aprobación de cada refactor. Crear rama desde `main` solo cuando se apruebe el alcance. No integrar sin revisión de TARS y validación visual del propietario.
+Entrega de **dos bloques funcionales grandes** en una rama desde `main`, con escenario integrado, pruebas y documentación. El bloque de simulación pasó las doce suites anteriores y dos nuevas antes de conectar presentación. No integrar sin revisión de TARS y validación visual del propietario.
 
 ## Bloque 1 — ecosistema táctico y autoridad del jugador
 
-Los comportamientos y números siguientes son recomendaciones para aprobar, no reglas ya aceptadas. Reutilizan los efectos de Fase 21, conservando estadísticas y economía.
+Los comportamientos y números siguientes están aprobados provisionalmente e implementados. Reutilizan los efectos de Fase 21, conservando estadísticas y economía.
 
 | Especie | Instinto local propuesto | Consecuencia y límite |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ Solo actúan sin orden explícita, acción explícita, movimiento comprometido n
 
 ### Control y prioridad
 
-Recomendación para aprobar: «Ecología» activada en el nuevo escenario y desactivable por criatura. Con los perfiles deshabilitados, conservar la defensa y resultados anteriores.
+«Ecología» activada en el nuevo escenario y desactivable por criatura. Con los perfiles deshabilitados, conservar la defensa y resultados anteriores.
 
 Prioridad de decisión: intención explícita válida del jugador, sea orden o acción, por encima de cualquier objetivo natural. Conservar reemplazos y rechazo de comandos explícitos contradictorios como en Fase 21. Una orden bloqueada conserva prioridad. Una nueva intención explícita cancela intención/preparación natural y libera su recurso; ninguna cancela daño aceptado ni el paso ya iniciado, que termina antes de cambiar de destino. Mantener la regla actual de no devolver el cooldown gastado por una preparación iniciada.
 
@@ -56,11 +56,11 @@ El daño normal sigue resolviéndose en el tick aceptado. Una animación posteri
 
 Consulta pura en simulación para acciones disponibles y motivo de indisponibilidad; la interfaz no duplica reglas. Tocar recurso ofrece su acción, rival conserva ataque dirigido y suelo conserva navegación. Mantener posición/desactivar ecología accesibles sin tapar la batalla.
 
-Propuesta para aprobar: **«Ir y actuar»** se aproxima y ejecuta una acción existente: comer, entrar en cueva o demoler una valla. Si desaparece el destino, cancelar con explicación; no buscar otra víctima. Respetar pasos y daño aceptados. Esto evita exigir un clic durante la corta ventana de adyacencia.
+**«Ir y actuar»** se aproxima y ejecuta una acción existente: revolcarse, comer, entrar en cueva o demoler una valla; también admite preparación local y salida explícita. Si desaparece el destino, cancelar con explicación; no buscar otra víctima. Respetar pasos y daño aceptados. Esto evita exigir un clic durante la corta ventana de adyacencia.
 
 No reanudar órdenes antiguas tras demoler por inferencia. Recomiendo dejar «Abrir paso y continuar» fuera del primer alcance: requeriría almacenar y mostrar un destino de continuación como parte de una orden explícita.
 
-## Arquitectura propuesta, sin implementación
+## Arquitectura implementada
 
 | Pieza | Cambio previsto |
 | --- | --- |
@@ -70,11 +70,11 @@ No reanudar órdenes antiguas tras demoler por inferencia. Recomiendo dejar «Ab
 | `context_actions.gd` | Reutilizar acciones con origen de solicitud explícito/natural; cancelación y liberación coherentes. |
 | `simulation.gd` | Arbitrar prioridades por tick, registrar fuente/objetivo de golpes y limpiar por instancia; planificación sin datos de Núcleos ocultos. |
 | `battle_feedback.gd` (nuevo) | Animaciones y señales por eventos, con límites de efectos simultáneos; ninguna regla de juego. |
-| `battle_demo.gd` y escena | Controles, consultas contextuales y escenario integrado. |
+| `battle_depth_demo.gd` y nueva escena | Controles, consultas contextuales y escenario integrado; `battle_demo.gd` solo añade hooks con comportamiento anterior por defecto. F5 conserva la demo aprobada. |
 
-Sin segundo motor de movimiento, otro pathfinder ni dependencias externas. Mantener `movement.gd` y adaptador 4×8. Decisiones en ticks enteros; propuesta técnica: buscar objetivos cada 4 ticks o ante eventos relevantes, conservando defensa/ataques en su frecuencia actual. Orden explícita entra al siguiente tick sin esperar el intervalo natural.
+Sin segundo motor de movimiento, otro pathfinder ni dependencias externas. Se mantienen `movement.gd` y adaptador 4×8. Decisiones en ticks enteros: buscar objetivos cada 4 ticks o ante cambios públicos de unidades/terrenos/construcciones, conservando defensa/ataques en su frecuencia actual. Orden explícita entra al siguiente tick sin esperar el intervalo natural. Reintento tras ruta natural bloqueada: 20 ticks configurables; no roba prioridad a una orden explícita.
 
-## Aceptación y pruebas propuestas
+## Criterios de aceptación
 
 - Repetir las 12 suites de Fase 21; con perfiles desactivados conservar resultados y economía.
 - Especie: elegibilidad, radio, frontera, prioridades, ausencia de marcha, habilidad en cooldown, muerte en preparación y cancelación por jugador.
@@ -87,9 +87,9 @@ Sin segundo motor de movimiento, otro pathfinder ni dependencias externas. Mante
 - Batalla completa con economía real: abrir acceso, disputar recurso, recuperar criatura, mantener posición y sustituir instinto con orden explícita. Sin manipular vida, posiciones o esencia para pasar el test.
 - Godot 4.7.2: suites, arranque y revisión visual. Medir rendimiento y probar Android real antes de afirmar validación de dispositivo.
 
-Estas pruebas de Fase 22 están propuestas, **no implementadas ni ejecutadas**. Cada bloque entrega una batalla verificable, no APIs aisladas.
+Resultados ejecutados y límites de validación registrados abajo; la aprobación visual del propietario sigue pendiente.
 
-## Decisiones importantes para aprobar
+## Decisiones importantes aprobadas para este prototipo
 
 1. Búsqueda natural hasta 2 pasos sin cruzar frontera; umbrales de heridas, recursos propios/neutrales y uso automático de habilidades/cooldowns existentes.
 2. Jabalí: último agresor durante 40 ticks y preparación automática; sin persecución ni paso extra de represalia.
@@ -100,3 +100,48 @@ Estas pruebas de Fase 22 están propuestas, **no implementadas ni ejecutadas**. 
 Conservar estadísticas, costes, recuperación por copia, seis ticks de movimiento, barro ×2, cueva y HP de valla. El bonus de demolición frente a valla de cuatro HP sigue siendo provisional: cambiar número de golpes o añadir efectos físicos requiere decisión aparte.
 
 Fuera de alcance: especies/cartas nuevas, cultivos que regeneran automáticamente, descubrimiento del Núcleo, PvP, desastres, construcciones completas, empujes/aturdimientos y 3D definitivo.
+
+## Presentación y dirección artística aprobadas
+
+Destino artístico: **mesa física tridimensional + criaturas, construcciones y ecosistemas invocados como hologramas mágicos a todo color**. Conservar colores originales, transparencia ligera, fantasía cartoon y orientación vertical. Invocaciones emergentes desde el suelo; construcciones y terrenos holográficos diferenciados de la mesa física.
+
+Esta entrega conserva recursos 2D provisionales. Las figuras de cerdo, jabalí, caballo y gólem tienen siluetas/colores distintos y poses de movimiento, revolcarse, comer, preparar embestida y demoler. La ligera transparencia es una referencia provisional, no un shader holográfico terminado. No sustituye la demo anterior ni implementa 3D definitivo.
+
+`attack_accepted` describe cada golpe aceptado con emisor, receptor, especie, fuente, posición, acción y daño. No retrasa el daño. `battle_feedback.gd` consume exclusivamente la vista de observador: genera poses, destellos, trazas, impacto, aparición y transición de derrota. Puede sustituirse por un renderizador 3D sin introducir reglas en los efectos. Máximo 64 efectos y una memoria por actor vivo; los efectos expiran, las entradas del mismo tick no se duplican y el reinicio limpia todo. La barra de vida y selección usan el mismo centro aparente que la figura durante movimiento y embestida.
+
+Interfaz futura **solo documentada**: nombres/avatares en las esquinas superiores; debajo, barra horizontal de dominio PvP que desplaza la ventaja contraria, sin afirmar una probabilidad estadística de victoria. Cuatro categorías inferiores —criaturas, terrenos, construcciones y habilidades/trucos— con una pila accesible bajo cada principal. El tablero domina la composición. No se implementan todavía estas pilas definitivas, barra PvP, avatares ni PvP real.
+
+## Escena de revisión y controles
+
+Abrir `scenes/battle_depth_demo.tscn` en Godot 4.7.2 y ejecutar **F6**. **F5 sigue abriendo `scenes/battle_demo.tscn` de Fase 21**. Desde consola: `godot --path . res://scenes/battle_depth_demo.tscn`.
+
+- Cartas, selección, navegación, atacar rivales y vallas conservan los gestos anteriores.
+- **Mantener:** orden persistente; termina el paso comprometido y defiende adyacentes sin iniciar viajes naturales. **Detener:** cancela orden/preparación y vuelve a permitir ecología.
+- **Ecología sí/no:** estado independiente de la copia seleccionada. Desactivar perfiles conserva defensa adyacente básica; no deja a la criatura indefensa ni cancela órdenes del jugador.
+- **Ir y actuar:** activar y tocar recurso o valla compatible. Consulta pura de simulación, aproxima y ejecuta; si hay cooldown espera, si se pierde el recurso termina con explicación. Otro toque en el botón cancela el modo; jugar carta también lo cancela.
+- Información del seleccionado explica instinto, orden, refugio o recurso ocupado. Ruta explícita amarilla, natural verde; destino bloqueado marcado en rojo. Preparación, cooldown, daño, recuperación de copia y derrota tienen señales separadas.
+
+Recursos en ambos flancos, barro frontal y cueva local. Un cerdo rival recibe una orden guionizada al flanco; el otro conserva su posición. Los refuerzos de valla y jabalí pagan la misma esencia que antes. No hay estratega rival ni marcha universal. Prueba rápida: desplegar cerdo en el barro de la fila local junto a la frontera para observar heridas/recuperación; usar caballo herido con maizal; desplegar gólem para abrir una valla con «Ir y actuar». Los instintos sanos descansan, no viajan para animar artificialmente el escenario.
+
+## Verificación realizada en Godot 4.7.2
+
+**18 suites aprobadas**, sin errores de scripts: las 12 previas (`board_coordinates`, `presentation`, `simulation`, `movement`, `movement_presentation`, `tactical_orders`, `tactical_presentation`, `ecology`, `context_actions`, `battle_systems`, `battle_presentation`, `battle_scenario`) y estas seis nuevas. Todos los archivos terminan en `_smoke.gd` dentro de `tests/`.
+
+| Suite nueva | Evidencia comprobada |
+| --- | --- |
+| `natural_intents_smoke` | Cuatro perfiles, heridas/cooldowns/descanso, recursos propios/neutrales/rivales, radio de ruta, frontera, copias y competencia, liberación por orden/muerte, refugio, autoridad de orden bloqueada, toggle por propietario, memoria de agresor, Núcleo oculto. Daño letal en trayecto natural y cancelación de preparación sin curar ni devolver cooldown. |
+| `context_orders_smoke` | Consultas puras con control de propietario, ir/comer/demoler/refugiarse/salir, pérdida de recurso durante paso comprometido, mantener y bloqueo del intercambio de terreno bajo ataque de un defensor en mantener. |
+| `battle_feedback_smoke` | Eventos de observador sin mutación, impacto direccional, poses distintas, fantasma de derrota sin unidad viva, límite y caducidad de efectos, deduplicación y reinicio. |
+| `battle_depth_presentation_smoke` | Toque, cartas, mantener/toggle, ir y actuar, refugio, selección en centro animado, independencia de render, reinicio y ventana vertical estrecha; F5 anterior conservado. |
+| `battle_depth_determinism_smoke` | Replay de estados/eventos a 20/30/120 FPS y conflictos simultáneos con entradas invertidas. |
+| `battle_depth_scenario_smoke` | Batalla integrada con economía real, sin escribir vida/posición/esencia: heridas en combate, recuperación natural, intervención para mantener y gólem pagado que abre acceso con ir y demoler. Sin daño ni descubrimiento del Núcleo. |
+
+Importación de editor y arranque de escenas comprobados. Capturas renderizadas en formatos verticales 480×900 y 360×800 revisadas por el implementador, sin solapamiento de tablero y controles. El controlador gráfico local utiliza la alternativa ANGLE indicada por Godot. Esto no constituye aprobación visual del propietario ni una prueba en Android.
+
+## Límites y revisión pendiente
+
+- Parámetros naturales configurables (`radius=2`, `decision_interval=4`, `threat_ticks=40`, `blocked_retry_ticks=20`); ecología desactivada por defecto en la simulación para conservar demos/suites anteriores, activada solo en la nueva escena. Defensa básica tiene su configuración separada.
+- El terreno inicial del escenario es neutral; las cartas jugadas conservan propiedad/disponibilidad y economía anteriores. Los tests unitarios usan fixtures de heridas/posición donde se indica; el escenario integrado no utiliza esas alteraciones.
+- No hay cultivo regenerativo, movimiento sin propósito, salida automática del barro, continuación oculta tras demolición ni selección estratégica de objetivos distantes. Un recurso ocupado se espera o se elige otro; los conflictos físicos siguen rechazando todas las solicitudes en disputa.
+- Sin cambios en `movement.gd`, estadísticas, daños, esencia, recuperación por copia, cueva ni descubrimiento del Núcleo. «Mantener» participa en la comprobación existente de ataque activo para no permitir intercambios que la defensa anterior bloqueaba.
+- Pendientes: revisión de TARS, validación visual del propietario, tacto/rendimiento en Android real y balance de perfiles. No integrar en `main` hasta recibir aprobación.

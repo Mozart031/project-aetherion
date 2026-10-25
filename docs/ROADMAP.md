@@ -17,7 +17,7 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 
 **Registro de integración Fase 21:** `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`, tras aprobación de TARS y validación visual del propietario. Doce suites y arranque aprobados en Godot 4.7.2; integración sin conflictos y sin cambios adicionales de jugabilidad.
 
-**Fase 22 — Dinamismo y profundidad de batalla:** [propuesta concreta](PHASE_22.md), pendiente de aprobación de alcance. Dos bloques completos: ecosistema táctico/autoridad del jugador e impacto/órdenes rápidas. No implementada; ninguna regla propuesta está aprobada por el mero hecho de documentarla.
+**Fase 22 — Dinamismo y profundidad de batalla:** ambos bloques aprobados por TARS y Dirección Creativa e implementados en `codex/phase-22-battle-depth`, base `main` `1c740d6`. [Reglas, arquitectura, pruebas y límites](PHASE_22.md). Perfiles situacionales de cuatro especies, recursos disputados, mantener posición, ecología por instancia, ir y actuar y presentación por eventos. Dieciocho suites aprobadas en Godot 4.7.2; renderizado vertical revisado por el implementador. **Pendiente revisión de TARS y validación visual del propietario; sin integrar en main.**
 
 **Fase 21 — Primera batalla jugable:** aprobada por TARS y validada visualmente por el propietario; integrada en `main` desde `2607c60587e7f8f46499539bed22d926158fd6ee`, rama `codex/phase-21-first-playable-battle` (base `ab75787`). [Estado y reglas](PHASE_21.md): escena integrada con cuatro categorías de cartas, despliegue, cuatro criaturas, terrenos, acciones temporizadas, refugio, valla y curación. Correcciones del propietario aplicadas: múltiples copias por especie y recuperación individual; intercambios/consumo de terreno sin recuperación artificial; refugio real y salida explícita. Doce suites y una batalla completa con economía real pasan en Godot 4.7.2; captura renderizada revisada por el implementador. Doce suites y arranque repetidos con éxito en Godot 4.7.2 antes de integrar. Sin conflictos ni cambios de jugabilidad adicionales; código integrado idéntico al de la rama aprobada. Pendiente prueba táctil Android.
 
@@ -55,7 +55,7 @@ Ambas suites nuevas pasan, además de las tres suites existentes de coordenadas,
 
 Movimiento validado en la simulación, ataques iniciados por el jugador y retroalimentación de daño, derrota y recuperación forman parte de la meta de prototipo interactivo de `GEMINI.md`. Su desglose, orden y reglas pendientes deben acordarse antes de implementarlos; no forman parte de la Fase 20.1B.
 
-La presentación final sigue siendo una mesa física 3D con terrenos volumétricos y miniaturas vivas. La demo 2D actual es provisional. PvP y progresión siguen siendo futuros.
+La dirección artística aprobada es una mesa física 3D con criaturas, terrenos y construcciones invocados como hologramas mágicos a todo color, ligera transparencia y estilo cartoon fantástico. Las invocaciones emergen desde el suelo. Fase 22 prepara eventos y presentación 2D, conserva la demo anterior en F5 y añade `scenes/battle_depth_demo.tscn` para F6. Nombres/avatares superiores, barra de dominio PvP y cuatro categorías con pilas inferiores quedan documentados para el futuro; sin PvP real ni 3D definitivo.
 
 ## Método de entrega y coordinación
 
@@ -96,4 +96,4 @@ godot --headless --path . --quit-after 5
 - Mecánica real de descubrimiento del Núcleo, fuera del prototipo aprobado.
 - Balance posterior de especies, construcciones y acciones; identidad y recuperación independiente por copia ya implementadas en Fase 21.
 
-Las Fases 20.1C, 20.2 y 21 están integradas con aprobación y verificación visual. No implementar Fase 22 hasta aprobar su alcance; no autorizar IA avanzada, descubrimiento real del Núcleo ni nuevas integraciones por inferencia.
+Las Fases 20.1C, 20.2 y 21 están integradas con aprobación y verificación visual. Fase 22 está autorizada e implementada únicamente en su rama para revisión; no integrarla sin aprobación de TARS y validación visual del propietario. IA avanzada y descubrimiento real del Núcleo siguen fuera de alcance.

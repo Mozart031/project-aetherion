@@ -9,6 +9,7 @@ const NaturalDefense = preload("res://scripts/natural_defense.gd")
 const TerrainEffects = preload("res://scripts/terrain_effects.gd")
 const ContextActions = preload("res://scripts/context_actions.gd")
 const BattleCards = preload("res://scripts/battle_cards.gd")
+const NaturalIntents = preload("res://scripts/natural_intents.gd")
 const WIDTH := 8
 const HEIGHT := 4
 const TICK_RATE := 20
@@ -43,6 +44,7 @@ var natural_defense := NaturalDefense.new()
 var terrain := TerrainEffects.new()
 var actions := ContextActions.new()
 var cards := BattleCards.new()
+var natural := NaturalIntents.new()
 
 func _init() -> void:
 	reset()
@@ -59,6 +61,7 @@ func reset() -> void:
 	orders.reset()
 	terrain.reset()
 	actions.reset()
+	natural.reset()
 	players = [
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "core_known_to": [true, false], "recovering": {}},
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "core_known_to": [false, true], "recovering": {}}
@@ -98,6 +101,33 @@ func queue_target(player: int, unit_id: int, target_id: int) -> void:
 func queue_stop(player: int, unit_id: int) -> void:
 	_queue_order(player, unit_id, {"kind": "stop"})
 
+func queue_hold(player: int, unit_id: int) -> void:
+	_queue_order(player, unit_id, {"kind": "hold"})
+
+func queue_act_at(player: int, unit_id: int, action: String, cell: Vector2i, target_id: int = -1) -> void:
+	_queue_order(player, unit_id, {"kind": "act_at", "action": action, "cell": cell, "target_id": target_id})
+
+func queue_ecology(player: int, unit_id: int, value: bool) -> void:
+	if not finished:
+		queued_commands.append({"type": "ecology", "player": player, "unit_id": unit_id, "enabled": value})
+
+func get_context_actions(player: int, unit_id: int, cell: Vector2i, target_id: int = -1) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var unit := get_unit(unit_id)
+	if unit.is_empty() or unit["owner"] != player:
+		return result
+	var labels := {"roll": "Ir a revolcarse", "forage": "Ir a comer", "enter": "Ir al refugio", "leave": "Salir del refugio", "charge": "Preparar embestida", "demolish": "Ir a demoler"}
+	var species_action: String = {"pig": "roll", "horse": "forage", "boar": "charge", "golem": "demolish"}.get(unit["kind"], "")
+	var choices: Array = [species_action, "leave" if unit.get("sheltered", false) and cell == unit["cell"] else "enter"]
+	for kind in choices:
+		if kind.is_empty():
+			continue
+		var option := actions.plan(unit, kind, cell, target_id, self)
+		option["label"] = labels[kind]
+		option["immediate"] = option["enabled"] and actions.can_start(unit, kind, self, target_id) and (cell == unit["cell"] or kind == "demolish")
+		result.append(option)
+	return result
+
 func queue_special(player: int, unit_id: int, kind: String, target_id: int = -1) -> void:
 	if not finished:
 		queued_commands.append({"type": "special", "player": player, "unit_id": unit_id, "kind": kind, "target_id": target_id})
@@ -134,6 +164,8 @@ func cell_under_attack(cell: Vector2i, commands: Array) -> bool:
 			var goal: Dictionary = orders.active.get(attacker["id"], {}).get("goal", {})
 			if goal.get("kind") == "attack_target" and goal.get("target_id") == target["id"]:
 				return true
+			if goal.get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
+				return true
 			for reaction in natural_defense.produce(self, commands):
 				if reaction["attacker"] == attacker["id"] and reaction["defender"] == target["id"]:
 					return true
@@ -141,6 +173,8 @@ func cell_under_attack(cell: Vector2i, commands: Array) -> bool:
 				if command["type"] == "attack" and command["attacker"] == attacker["id"] and command["defender"] == target["id"]:
 					return true
 				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("target_id") == target["id"]:
+					return true
+				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
 					return true
 	return false
 
@@ -165,7 +199,7 @@ func get_player_view(observer: int) -> Dictionary:
 	var card_states := {}
 	for kind in BattleCards.Catalog.CARDS:
 		card_states[kind] = cards.state(observer, kind, self)
-	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "buildings": cards.buildings.duplicate(true), "cards": card_states, "motions": movement.active.duplicate(true), "actions": actions.active.duplicate(true), "orders": orders.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
+	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "buildings": cards.buildings.duplicate(true), "cards": card_states, "motions": movement.active.duplicate(true), "actions": actions.active.duplicate(true), "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
@@ -201,9 +235,11 @@ func step() -> void:
 		elif command["type"] == "play_card":
 			cards.play(command, self, commands)
 	commands = _filter_mixed_orders(commands)
+	natural.ingest(commands, self)
 	orders.ingest(commands, self)
 	actions.ingest(commands, self)
 	commands.append_array(orders.produce(self))
+	commands.append_array(natural.produce(self))
 	commands.append_array(natural_defense.produce(self, commands))
 	commands.append_array(actions.produce_damage(self))
 	# Snapshot before damage/arrivals: no swaps, chains or arrival-tick redirection.
@@ -234,7 +270,10 @@ func step() -> void:
 							actions.active[attacker["id"]]["impact_accepted"] = true
 					var armor: int = int(CARD_STATS.get(defender["kind"], {"armor": 0})["armor"])
 					var protection := 1 if defender.get("sheltered", false) else 0
-					unit_damage[defender["id"]] = int(unit_damage.get(defender["id"], 0)) + maxi(1, atk - armor - protection)
+					var amount := maxi(1, atk - armor - protection)
+					unit_damage[defender["id"]] = int(unit_damage.get(defender["id"], 0)) + amount
+					natural.record_hit(int(attacker["id"]), int(defender["id"]), tick_count)
+					events.append({"type": "attack_accepted", "unit_id": attacker["id"], "target_id": defender["id"], "kind": attacker["kind"], "from_cell": attacker["cell"], "cell": defender["cell"], "amount": amount, "source": command.get("source", "explicit"), "action": "demolish" if command.get("demolition", false) else "attack"})
 					attacker["ready_tick"] = tick_count + int(CARD_STATS[attacker["kind"]]["interval"])
 			"core_attack":
 				var attacker := get_unit(int(command["attacker"]))
@@ -274,6 +313,7 @@ func step() -> void:
 	units = survivors
 	actions.advance(self)
 	orders.cleanup(self)
+	natural.cleanup(self)
 	# Accepted attacks use the origin and apply damage before any arrival.
 	events.append_array(movement.advance(units, tick_count))
 	_check_end()
@@ -281,10 +321,12 @@ func step() -> void:
 		movement.reset()
 		orders.reset()
 		actions.reset()
+		natural.reset()
 	else:
 		var movement_events := movement.resolve(commands, units, tick_count, move_duration_ticks, occupied, busy, terrain.durations(move_duration_ticks))
 		events.append_array(movement_events)
 		orders.observe_movement(self, movement_events)
+		natural.planner.observe_movement(self, movement_events)
 
 func _apply_summon(command: Dictionary) -> void:
 	var player: int = int(command["player"])
@@ -302,7 +344,7 @@ func _apply_summon(command: Dictionary) -> void:
 		if unit["cell"] == cell:
 			return
 	players[player]["essence"] -= int(stats["cost"])
-	units.append({"id": next_unit_id, "copy_id": copy_id, "owner": player, "kind": kind, "cell": cell, "hp": stats["hp"], "ready_tick": tick_count})
+	units.append({"id": next_unit_id, "copy_id": copy_id, "owner": player, "kind": kind, "cell": cell, "hp": stats["hp"], "ready_tick": tick_count, "ecology_enabled": true})
 	cards.copies[player][kind][copy_id]["unit_id"] = next_unit_id
 	events.append({"type": "summoned", "unit_id": next_unit_id, "kind": kind, "owner": player})
 	next_unit_id += 1

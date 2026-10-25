@@ -6,7 +6,7 @@ Instrucciones permanentes para Antigravity/Gemini y otros agentes que trabajen e
 
 Juego Android vertical en Godot 4.7 y GDScript. Inspiración de experiencia: la mesa viva del episodio *Guerra de cartas* de *Hora de Aventura* y la claridad y acción simultánea de *Clash Royale*. Crear arte, criaturas, nombres y recursos originales; no copiar activos protegidos.
 
-El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y miniaturas vivas**. No convertirlo en ajedrez, juego por turnos ni cuadrícula 2D plana como presentación final.
+El juego debe sentirse como una **mesa física 3D con criaturas, construcciones y ecosistemas invocados como hologramas mágicos a todo color**, con transparencia ligera y estilo cartoon fantástico. Conservar los colores originales de las criaturas. Los terrenos invocados se distinguen de la superficie física; las cartas hacen emerger sus invocaciones desde el suelo. No convertirlo en ajedrez, juego por turnos ni cuadrícula 2D plana como presentación final.
 
 ## Reglas acordadas: no modificar sin aprobación
 
@@ -25,7 +25,8 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 ## Dirección artística y herramientas
 
-- Mesa 3D con terrenos que emergen, se dañan y muestran volumen; criaturas expresivas como miniaturas.
+- Mesa física 3D e invocaciones holográficas expresivas de criaturas, terrenos y construcciones que emergen desde el suelo. Esta dirección artística está aprobada; el 3D definitivo no forma parte de la Fase 22.
+- Interfaz futura documentada: nombres/avatares en las esquinas superiores, barra horizontal de dominio PvP debajo (no probabilidad de victoria), cuatro categorías inferiores con sus pilas accesibles. El tablero conserva el protagonismo. Sin PvP real ni interfaz definitiva en Fase 22.
 - Flow: referencias visuales/animación conceptual. Blender: modelos y animaciones 3D. Godot: juego real. Un video generado no es un modelo jugable.
 - Mantener identidad visual consistente, lectura clara de ataques y rendimiento Android.
 
@@ -83,7 +84,13 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 ## Próxima meta: prototipo interactivo
 
-Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff` tras aprobación de TARS y validación visual del propietario; doce suites y arranque repetidos con éxito. Fase 22 «Dinamismo y profundidad de batalla» tiene propuesta en `docs/PHASE_22.md`, organizada en dos bloques funcionales completos. No está implementada ni autorizada para implementación todavía: los cambios importantes de instintos, navegación natural y nuevas órdenes requieren aprobar el alcance. Mantener prioridad del jugador, determinismo, recuperación por copia y Núcleo oculto.
+Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff` tras aprobación de TARS y validación visual del propietario. Los dos bloques de Fase 22 «Dinamismo y profundidad de batalla» fueron autorizados por TARS y Dirección Creativa y están implementados en `codex/phase-22-battle-depth`, desde `main` `1c740d6`. **No integrados en main; pendientes de revisión de TARS y validación visual del propietario.** Reglas y validación real en `docs/PHASE_22.md`.
+
+Reglas provisionales aprobadas para 22: cerdo herido busca barro hasta dos pasos reales; caballo con dos HP perdidos busca maizal propio/neutral hasta dos pasos; rutas naturales no cruzan la mitad territorial de inicio. Jabalí prepara la embestida existente ante rival adyacente y prioriza al último agresor de hasta 40 ticks; gólem defiende contra criaturas adyacentes y, sin amenaza, demuele una valla rival adyacente. Sin persecución natural, azar ni paseo sin propósito. Intenciones de recursos con prioridad de solicitud y desempate por ID. Tras recuperarse descansan; no desalojar automáticamente barro ocupado.
+
+«Mantener posición» es persistente: acaba el paso comprometido y permite solo defensa estacionaria adyacente. «Detener» cancela la orden y permite otra vez instintos. Ecología configurable por instancia; desactivarla conserva la defensa básica anterior. «Ir y actuar» aproxima y ejecuta una acción existente, esperando su cooldown, sin reanudar destinos antiguos. Las órdenes explícitas, incluso bloqueadas, y el refugio prevalecen; cancelar preparación no devuelve cooldown ni cancela un paso o daño aceptado. Sin cambios de estadísticas, esencia, recuperación, daño o descubrimiento del Núcleo.
+
+Nueva escena: `scenes/battle_depth_demo.tscn` (abrir y ejecutar **F6**). F5 conserva `battle_demo.tscn`. `battle_feedback.gd` consume solo eventos/vistas de observador y genera poses/efectos limitados, preparado para un futuro renderizador holográfico; no tiene autoridad sobre la simulación. Dieciocho suites pasan en Godot 4.7.2 (doce previas y seis nuevas). Capturas revisadas por el implementador; Android real, balance y aprobación visual del propietario pendientes.
 
 La Fase 21 «Primera batalla jugable» fue aprobada por TARS y por el propietario tras validación visual en Godot e integrada en `main` desde `codex/phase-21-first-playable-battle`, commit de funcionalidad `2607c60587e7f8f46499539bed22d926158fd6ee` (base `ab75787`). Cuatro espacios de cartas, cerdo/jabalí/caballo/gólem, maizal/cueva/barro, valla y curación provisional; órdenes contextuales y acciones con preparación/efectos visibles. Doce suites y escenario completo con economía real aprobados en Godot 4.7.2. Las doce suites y el arranque se repitieron con éxito antes de la integración, sin conflictos ni cambios adicionales de jugabilidad. Ver `docs/PHASE_21.md` para reglas exactas, pruebas y límites.
 

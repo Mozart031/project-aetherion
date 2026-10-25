@@ -3,6 +3,17 @@ extends RefCounted
 ## Provisional adjacent defense, separate from explicit goals and species skills.
 var enabled := false
 
+func target_for(unit: Dictionary, sim, profiles: bool = true) -> int:
+	var adjacent: Array[int] = []
+	for other in sim.units:
+		var delta: Vector2i = other["cell"] - unit["cell"]
+		if other["owner"] != unit["owner"] and absi(delta.x) + absi(delta.y) == 1:
+			adjacent.append(int(other["id"]))
+	if profiles:
+		return sim.natural.preferred_target(unit, adjacent, sim.tick_count)
+	adjacent.sort()
+	return adjacent[0] if not adjacent.is_empty() else -1
+
 func produce(sim, commands: Array) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if not enabled:
@@ -19,16 +30,11 @@ func produce(sim, commands: Array) -> Array[Dictionary]:
 		var id: int = unit["id"]
 		if unit.get("sheltered", false):
 			continue
-		if sim.orders.active.has(id) or sim.movement.active.has(id) or sim.actions.active.has(id) or explicit_units.has(id):
+		if sim.orders.active.has(id) or sim.natural.has_goal(id) or sim.movement.active.has(id) or sim.actions.active.has(id) or explicit_units.has(id):
 			continue
 		if int(sim.CARD_STATS[unit["kind"]]["atk"]) <= 0:
 			continue
-		var target_id := -1
-		for other in sim.units:
-			var delta: Vector2i = other["cell"] - unit["cell"]
-			if other["owner"] != unit["owner"] and absi(delta.x) + absi(delta.y) == 1:
-				if target_id == -1 or int(other["id"]) < target_id:
-					target_id = int(other["id"])
+		var target_id := target_for(unit, sim)
 		if target_id != -1:
-			result.append({"type": "attack", "attacker": id, "defender": target_id})
+			result.append({"type": "attack", "attacker": id, "defender": target_id, "source": "defense"})
 	return result
