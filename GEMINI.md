@@ -40,7 +40,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Reglas de ingeniería
 
 1. Separar **simulación determinista** (reglas/estado) de **presentación** (escenas, efectos, entrada).
-2. Hacer cambios pequeños, probables y reversibles. No reescribir archivos innecesariamente.
+2. Entregar bloques funcionales completos e integrados, con cambios internos comprobables y reversibles. No reescribir archivos innecesariamente ni fragmentar la entrega en mecánicas desconectadas.
 3. No inventar APIs ni declarar una funcionalidad terminada sin probarla en Godot 4.7.
 4. No cambiar reglas de diseño por iniciativa propia. Si hay ambigüedad, proponer alternativas y pedir aprobación.
 5. Conservar orientación vertical y compatibilidad Android, incluso cuando se pruebe en PC.
@@ -60,7 +60,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 - Codex es el implementador principal; ChatGPT Work apoya tareas extensas; Gemini en Antigravity realiza revisiones técnicas independientes cuando corresponda; TARS supervisa arquitectura y reglas; Godot es el entorno de validación.
 - Conservar el trabajo realizado: no reiniciar fases ni repetir incrementos completados. Verificar Git local y remoto antes de sincronizar.
 - GitHub es el punto de sincronización con TARS. Mantener `main` estable y utilizar ramas de funcionalidad `codex/` para cambios importantes; integrar únicamente cambios aprobados y validados.
-- Trabajar en incrementos pequeños con pruebas automatizadas y validación en Godot 4.7.
+- Trabajar en bloques funcionales grandes, con pruebas automatizadas durante el desarrollo y validación en Godot 4.7.
 - Antes de editar, coordinar los archivos asignados si Gemini tiene una revisión o implementación activa. No editar simultáneamente los mismos archivos que Gemini.
 - `GEMINI.md` conserva las reglas; `docs/ROADMAP.md` registra hitos, estado, validación y commits. Los objetivos futuros no autorizan por sí solos su implementación.
 
@@ -82,6 +82,8 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 - Decisión adicional del propietario: mantener oculto el Núcleo rival en el prototipo; rechazar ataques mientras no esté descubierto. El estado descubierto se prueba únicamente con fixtures. No implementar aún una mecánica de descubrimiento ni revelar al entrar en su celda.
 
 ## Próxima meta: prototipo interactivo
+
+Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff` tras aprobación de TARS y validación visual del propietario; doce suites y arranque repetidos con éxito. Fase 22 «Dinamismo y profundidad de batalla» tiene propuesta en `docs/PHASE_22.md`, organizada en dos bloques funcionales completos. No está implementada ni autorizada para implementación todavía: los cambios importantes de instintos, navegación natural y nuevas órdenes requieren aprobar el alcance. Mantener prioridad del jugador, determinismo, recuperación por copia y Núcleo oculto.
 
 La Fase 21 «Primera batalla jugable» fue aprobada por TARS y por el propietario tras validación visual en Godot e integrada en `main` desde `codex/phase-21-first-playable-battle`, commit de funcionalidad `2607c60587e7f8f46499539bed22d926158fd6ee` (base `ab75787`). Cuatro espacios de cartas, cerdo/jabalí/caballo/gólem, maizal/cueva/barro, valla y curación provisional; órdenes contextuales y acciones con preparación/efectos visibles. Doce suites y escenario completo con economía real aprobados en Godot 4.7.2. Las doce suites y el arranque se repitieron con éxito antes de la integración, sin conflictos ni cambios adicionales de jugabilidad. Ver `docs/PHASE_21.md` para reglas exactas, pruebas y límites.
 
