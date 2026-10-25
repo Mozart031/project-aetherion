@@ -58,7 +58,7 @@ func _run() -> void:
 	_check(wounded and recovered and hits, "Paid battle creates wounds, natural mud recovery and visible accepted attacks")
 	_check(demolished and fence_ordered, "Same encounter includes a paid golem opening the reinforced route with go-and-demolish")
 	_check(interrupted and held, "Player overrides a subsequent natural intention with persistent hold in the real encounter")
-	_check(view.sim.players[0]["essence"] <= 8 and view.sim.cards.state(0, "golem", view.sim)["available"] == 2, "Integrated ecology uses actual essence and independent card copies")
+	_check(view.sim.players[0]["essence"] <= 8 and view.sim.cards.state(0, "golem", view.sim)["available"] == 0, "Integrated ecology keeps the active authentic golem unavailable and uses real essence")
 	_check(not view.sim.get_player_view(0)["players"][1].has("core_cell") and view.sim.players[1]["core_hp"] == 12, "Integrated encounter never discovers or damages the hidden core")
 	view.queue_free()
 	if failures == 0:

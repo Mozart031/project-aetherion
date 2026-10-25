@@ -21,7 +21,7 @@ func _run() -> void:
 	var golem_id: int = view.selected_unit_id
 	_check(view.sim.get_unit(golem_id).get("kind") == "golem", "Player deploys golem using the initial four essence")
 	var first_targeted := false
-	var second_targeted := false
+	var opened_route := false
 	var pig_requested := false
 	var pig_id := -1
 	var healed := false
@@ -32,9 +32,9 @@ func _run() -> void:
 		if not first_targeted:
 			view.sim.queue_target(0, golem_id, 1)
 			first_targeted = true
-		elif view.sim.get_unit(1).is_empty() and not second_targeted:
-			view.sim.queue_target(0, golem_id, 2)
-			second_targeted = true
+		if view.sim.get_unit(1).is_empty() and not opened_route:
+			opened_route = true
+			view.sim.queue_destination(0, golem_id, Vector2i(5, 2))
 		var golem: Dictionary = view.sim.get_unit(golem_id)
 		if not golem.is_empty() and not view.sim.cards.buildings.is_empty():
 			var fence: Dictionary = view.sim.cards.buildings[0]
@@ -58,7 +58,7 @@ func _run() -> void:
 				rolled = true
 			if event["type"] == "special_completed" and event["kind"] == "demolish":
 				demolished = true
-	_check(view.sim.get_unit(1).is_empty() and view.sim.get_unit(2).is_empty(), "Directed navigation and combat defeat the initial defenders")
+	_check(view.sim.get_unit(1).is_empty() and not view.sim.get_unit(golem_id).is_empty(), "Directed navigation defeats the unique initial defender")
 	_check(demolished and view.sim.cards.buildings.is_empty(), "Same battle includes prepared demolition of the paid reinforcement fence")
 	_check(healed and rolled and not view.sim.get_unit(pig_id).is_empty(), "Mud action and paid healing sustain an independently controlled pig")
 	_check(view.sim.units.all(func(unit): return unit["owner"] == 0), "Player can clear the fixed combat scenario using actual economy")

@@ -1,0 +1,56 @@
+extends SceneTree
+
+const Gesture = preload("res://scripts/card_stack_gesture.gd")
+var failures := 0
+
+func _check(value: bool, message: String) -> void:
+	if not value:
+		failures += 1
+		push_error(message)
+
+func _initialize() -> void:
+	var gesture := Gesture.new()
+	var rect := Rect2(0, 0, 100, 100)
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(50, 110))
+	var result := gesture.release(0, Vector2(50, 300))
+	_check(result["type"] == "cycle" and not gesture.active(), "A long downward swipe cycles exactly once")
+	_check(gesture.release(0, Vector2(50, 300)).is_empty(), "Repeated release cannot rotate twice")
+	gesture.press(0, "terrain", Vector2(50, 60), rect)
+	_check(gesture.move(0, Vector2(50, 10))["type"] == "begin", "Upward movement starts placement after threshold")
+	result = gesture.release(0, Vector2(50, 10))
+	_check(result["type"] == "drop" and not result["cancel"], "Short upward swipe inside the card arms placement rather than cancelling")
+	gesture.press(0, "terrain", Vector2(50, 60), rect)
+	gesture.move(0, Vector2(50, -100))
+	result = gesture.release(0, Vector2(50, 60))
+	_check(result["cancel"], "Returning to origin after leaving cancels a drag")
+	gesture.press(0, "trick", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(180, 60))
+	_check(gesture.release(0, Vector2(180, 60))["type"] == "front", "Rightward gesture requests the front without selecting or rotating")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	_check(not gesture.press(1, "terrain", Vector2(20, 20), rect) and gesture.move(1, Vector2(20, -100)).is_empty(), "A second pointer cannot steal capture")
+	_check(gesture.release(1, Vector2(20, -100)).is_empty() and gesture.active(), "Secondary release cannot complete the owner's gesture")
+	gesture.cancel()
+	gesture.press(-1, "construction", Vector2(50, 50), rect)
+	_check(gesture.release(-1, Vector2(50, 50))["type"] == "select", "Mouse tap is the accessible select-then-place alternative")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(50, 120))
+	_check(gesture.move(0, Vector2(50, -100)).is_empty() and gesture.release(0, Vector2(50, -100))["type"] == "none", "Reversing a downward gesture cannot also initiate placement")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	result = gesture.release(0, Vector2(50, -100))
+	_check(result["type"] == "drop" and result["begin"], "Coalesced up-and-release still produces one placement session")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(10, 52))
+	_check(gesture.release(0, Vector2(10, 52))["type"] == "back", "Dominant left gesture opens the reverse")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(90, 90))
+	_check(gesture.release(0, Vector2(90, 90))["type"] == "none", "Ambiguous diagonal neither flips nor places")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	gesture.move(0, Vector2(10, 50))
+	_check(gesture.move(0, Vector2(10, -100)).is_empty() and gesture.release(0, Vector2(10, -100))["type"] == "none", "A locked horizontal gesture cannot also become a vertical deployment")
+	gesture.press(0, "creature", Vector2(50, 50), rect)
+	_check(gesture.move(0, Vector2(45, -10))["type"] == "begin", "Predominantly vertical upward movement retains placement semantics")
+	gesture.cancel()
+	if failures == 0:
+		print("PASS: directional thresholds, single cycle, select/drag, cancellation, reversal, coalesced release and exclusive capture")
+	quit(0 if failures == 0 else 1)

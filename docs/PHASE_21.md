@@ -12,7 +12,7 @@ F5 abre `scenes/battle_demo.tscn`, ventana provisional vertical de 480×900. Se 
 4. Acción contextual: cerdo en barro, caballo en maizal, preparación del jabalí o gólem adyacente a valla enemiga. Refugio permite entrar/salir de una cueva; una orden de movimiento/ataque también tramita la salida.
 5. Detener cancela el objetivo respetando el paso comprometido; Reiniciar restaura escena, cartas y recursos.
 
-El jugador empieza con cuatro de esencia y sin criaturas impuestas. Hay maizal, cueva y barro neutrales de escenario. Dos cerdos rivales estacionarios se despliegan usando sus cuatro de esencia. Refuerzos de escenario fijos, pagados con su regeneración normal: intento de valla a partir del tick 121 y jabalí en la frontera a partir del 301. No hay planificación enemiga avanzada ni órdenes de avance. Si la celda está ocupada o reservada, el intento se rechaza sin desplazar unidades ni gastar recursos.
+El jugador empieza con cuatro de esencia y sin criaturas impuestas. Hay maizal, cueva y barro neutrales de escenario. Un cerdo rival se despliega pagando dos de esencia; la segunda invocación inicial duplicada se eliminó al corregir la unicidad en Fase 23. Refuerzos de escenario fijos, pagados con su regeneración normal: intento de valla a partir del tick 121 y jabalí en la frontera a partir del 301. No hay planificación enemiga avanzada ni órdenes de avance. Si la celda está ocupada o reservada, el intento se rechaza sin desplazar unidades ni gastar recursos.
 
 Al despejar unidades y construcción rivales se muestra «Escenario despejado». Es un objetivo local de prueba, no una nueva regla de victoria por Núcleo. La partida conserva su límite y desempate provisionales anteriores.
 
@@ -29,11 +29,11 @@ Jabalí y gólem conservan sus estadísticas. Costes y estadísticas son datos p
 
 ## Copias, disponibilidad, reutilización y recuperación
 
-Corrección explícita del propietario: **no hay prohibición global por especie**. Por defecto, tres copias configurables por especie y jugador (`cards.copies_per_species`, aplicado al reiniciar). Cada despliegue recibe un ID de unidad nuevo y una copia con vida, posición, órdenes, acciones y estado independientes.
+Corrección vigente del director creativo en Fase 23, que sustituye el diseño anterior de 21: **una sola criatura auténtica por especie y jugador**. Un despliegue nuevo obtiene una identidad de unidad nueva, pero solo se acepta cuando el único registro de su especie está disponible; no existen copias de reserva durante actividad o recuperación.
 
-- Una copia activa no está disponible; otra copia libre de su misma especie sí puede desplegarse pagando esencia y respetando ocupación.
-- Una derrota inicia únicamente la recuperación de esa copia. `players[player].recovering` ahora se indexa por ID de instancia, con `kind`, `copy_id` y `ready_tick`; dejó de ser un temporizador global por especie. Las regresiones se adaptaron a esta corrección aprobada.
-- Al expirar, la copia vuelve a estar disponible sin reaparecer sola. Se muestran cantidades libres y temporizadores de recuperación en la interfaz. Dos derrotas de la misma especie pueden tener fechas diferentes.
+- Una especie activa no puede volver a desplegarse, aunque haya esencia y celdas libres. El rival puede tener su propia auténtica de esa especie.
+- Una derrota bloquea la carta de esa especie/jugador durante toda su recuperación. `players[player].recovering` ahora se indexa por ID de instancia, con `kind`, `copy_id` y `ready_tick`; dejó de ser un temporizador global por especie. Las regresiones se adaptaron a esta corrección aprobada.
+- Al expirar, la copia vuelve a estar disponible sin reaparecer sola. Se muestran cantidades libres y temporizadores de recuperación en la interfaz. No se puede invocar de nuevo esa especie antes de su fecha de recuperación.
 - Terrenos: una carta activa por tipo/jugador en este prototipo. El intercambio normal libera de inmediato la anterior, sin derrota ni recuperación. El maizal consumido vuelve disponible inmediatamente. Los terrenos neutrales de escenario no ocupan copias del jugador.
 - Construcción: una valla activa por jugador; destruirla por combate inicia 120 ticks configurables (`construction_recovery_ticks`). No se añade retirada/intercambio de construcciones a la interfaz.
 - Truco de curación: reutilizable pagando dos de esencia, sin cooldown artificial; recupera hasta dos HP y no se acepta en objetivos sanos o enemigos.
@@ -80,7 +80,7 @@ Eventos de daño, curación, acciones, despliegue, derrota y recuperación alime
 
 Doce suites automatizadas aprobadas en Godot 4.7.2: las ocho existentes de 20.2, `context_actions_smoke.gd`, `battle_systems_smoke.gd`, `battle_presentation_smoke.gd` y `battle_scenario_smoke.gd`.
 
-- Sistemas: múltiples copias activas, recuperación independiente y fechas diferentes, disponibilidad durante derrota de otra copia, falta de esencia, límites y ocupación, intercambio sin recuperación, consumo de maizal, curación reutilizable, refugio/entrada/salida/daño mínimo, vallas/reservas/demolición, muerte durante impacto y Núcleos ocultos.
+- Sistemas: unicidad por especie/jugador, bloqueo durante actividad y recuperación, rechazo sin coste y disponibilidad al terminar recuperación, falta de esencia, límites y ocupación, intercambio sin recuperación, consumo de maizal, curación reutilizable, refugio/entrada/salida/daño mínimo, vallas/reservas/demolición, muerte durante impacto y Núcleos ocultos.
 - Acciones: preparación exacta, cooldown, efecto sobre el tablero, cancelación, prioridad y conflictos deterministas.
 - Presentación: cuatro espacios, acceso a las cuatro criaturas, envío de órdenes en lugar de escrituras de estado, despliegue, esencia, acciones, feedback conservado entre ticks, recuperación visible, ventana vertical estrecha y reinicio.
 - Escenario completo: se despeja la batalla mediante despliegue, navegación, ataques dirigidos, demolición, barro y curación con la economía real. El test solo envía entradas de jugador; no modifica vida, esencia ni posiciones para ganar.
@@ -102,5 +102,5 @@ Repetir también las ocho suites listadas en `PHASE_20_2.md`, arranque con `--qu
 - Núcleo rival sigue oculto; no se descubre por movimiento o consultas. El estado descubierto solo se usa en fixtures. Despejar el escenario no declara victoria por destrucción del Núcleo.
 - No hay retirada ni intercambio de criaturas/construcciones en la interfaz. Ocupación y rutas conservan restricciones anteriores; un bloqueo permanente requiere otra orden.
 - El sistema de especies antiguas y las escenas de pruebas se conservan; las cartas de esta escena se limitan a las cuatro solicitadas.
-- Costes, estadísticas, cantidades de copias, preparación y recuperación son provisionales; ajustes de jugabilidad significativos requieren consulta. Refugio y disponibilidad siguen las correcciones explícitas del propietario.
+- Costes, estadísticas, preparación y recuperación son provisionales; ajustes de jugabilidad significativos requieren consulta. Refugio y disponibilidad siguen las correcciones explícitas del propietario.
 - Revisión de TARS y validación visual del propietario aprobadas; Fase 21 integrada. Pendiente toque real Android. La siguiente fase requiere aprobar su propuesta y alcance antes de implementarla.

@@ -1,6 +1,9 @@
 extends "res://scripts/main.gd"
 
 const Catalog = preload("res://scripts/battle_catalog.gd")
+signal battle_restarted
+var card_picker: Control
+var card_picker_extra_height := 0.0
 var selected_card := ""
 var category := "creature"
 var last_message := "Elige una carta y toca tus filas inferiores."
@@ -27,7 +30,6 @@ func _start_battle() -> void:
 	sim.place_terrain(Vector2i(2, 1), "cornfield")
 	sim.place_terrain(Vector2i(2, 2), "cave")
 	sim.queue_play_card(1, "pig", Vector2i(6, 1))
-	sim.queue_play_card(1, "pig", Vector2i(6, 2))
 	accumulator = 0.0
 	selected_unit_id = -1
 	selected_card = ""
@@ -35,6 +37,7 @@ func _start_battle() -> void:
 	scheduled_boar = false
 	feedback.clear()
 	last_message = "Despliega en tus filas; nadie avanza sin una orden."
+	battle_restarted.emit()
 
 func _label(size: int = 14) -> Label:
 	var label := Label.new()
@@ -71,17 +74,21 @@ func _build_ui() -> void:
 	dock.offset_top = -_dock_height()
 	dock.offset_bottom = -12
 	root.add_child(dock)
-	var categories := HBoxContainer.new()
-	dock.add_child(categories)
-	for index in range(Catalog.CATEGORIES.size()):
-		var key: String = Catalog.CATEGORIES[index]
-		var button := _button(Catalog.CATEGORY_LABELS[index], func(): _choose_category(key))
-		button.custom_minimum_size.y = 44
-		categories.add_child(button)
-		category_buttons.append(button)
 	palette = HBoxContainer.new()
-	palette.custom_minimum_size.y = 48
-	dock.add_child(palette)
+	if is_instance_valid(card_picker):
+		# Optional component; legacy demos retain their exact picker by default.
+		dock.add_child(card_picker)
+	else:
+		var categories := HBoxContainer.new()
+		dock.add_child(categories)
+		for index in range(Catalog.CATEGORIES.size()):
+			var key: String = Catalog.CATEGORIES[index]
+			var button := _button(Catalog.CATEGORY_LABELS[index], func(): _choose_category(key))
+			button.custom_minimum_size.y = 44
+			categories.add_child(button)
+			category_buttons.append(button)
+		palette.custom_minimum_size.y = 48
+		dock.add_child(palette)
 	var controls := HBoxContainer.new()
 	controls.custom_minimum_size.y = 42
 	dock.add_child(controls)
@@ -95,7 +102,11 @@ func _build_ui() -> void:
 	var hint := _label(12)
 	hint.text = "Azul: elegir · Celda: ir · Rival/valla: atacar\nMaizal: comer · Barro: revolcarse · Cueva: entrar/salir"
 	dock.add_child(hint)
-	_choose_category("creature")
+	if not is_instance_valid(card_picker):
+		_choose_category("creature")
+	else:
+		palette.free()
+		palette = null
 
 func _dock_height() -> float:
 	return 218.0
@@ -202,7 +213,7 @@ func _after_sim_step() -> void:
 		elif type == "special_cancelled":
 			last_message = "Acción interrumpida: no queda un efecto pendiente."
 		elif type == "card_recovered" and event.get("player", LOCAL_PLAYER) == LOCAL_PLAYER:
-			last_message = "Una copia de " + str(Catalog.CARDS.get(event["kind"], {"label": "criatura"})["label"]) + " vuelve disponible."
+			last_message = "La carta de " + str(Catalog.CARDS.get(event["kind"], {"label": "criatura"})["label"]) + " vuelve disponible."
 	if sim.tick_count > 302 and scheduled_boar and sim.units.all(func(unit): return unit["owner"] == LOCAL_PLAYER) and sim.cards.buildings.all(func(building): return building["owner"] == LOCAL_PLAYER):
 		last_message = "Escenario despejado. Reinicia para otra batalla."
 	feedback = feedback.filter(func(effect): return int(effect["expires"]) > sim.tick_count)
@@ -239,7 +250,7 @@ func _refresh_ui() -> void:
 			description += " · acción %.1fs" % (float(wait_ticks) / 20.0)
 	header.text = "Isla del Caos · Primera batalla\nEsencia %s/8 · +1 en %.1f s" % [str(sim.players[LOCAL_PLAYER]["essence"]), float(60 - sim.tick_count % 60) / 20.0]
 	detail.text = description + "\n" + last_message
-	for button in palette.get_children():
+	for button in (palette.get_children() if is_instance_valid(palette) else []):
 		var kind: String = button.get_meta("card")
 		var data: Dictionary = Catalog.CARDS[kind]
 		var state := sim.cards.state(LOCAL_PLAYER, kind, sim)

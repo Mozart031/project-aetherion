@@ -48,14 +48,14 @@ func _test_defense() -> void:
 		sim = AetherionSimulation.new()
 		sim.queue_summon(0, "boar", Vector2i(3, 1))
 		sim.queue_summon(1, "pigeon", Vector2i(5, 1))
-		sim.queue_summon(1, "pigeon", Vector2i(4, 2))
+		sim.queue_summon(1, "beaver", Vector2i(4, 2))
 		sim.step()
 		sim.get_unit(1)["cell"] = Vector2i(4, 1) # Test fixture with two adjacent enemies.
 		if reverse_units:
 			sim.units.reverse()
 		sim.natural_defense.enabled = true
 		sim.step()
-		_check(sim.get_unit(2).is_empty() and sim.get_unit(3)["hp"] == 2, "Provisional lowest-ID target independent of unit iteration order")
+		_check(sim.get_unit(2).is_empty() and sim.get_unit(3)["hp"] == 4, "Provisional lowest-ID target independent of unit iteration order")
 
 func _test_priority() -> void:
 	var sim := _pair()

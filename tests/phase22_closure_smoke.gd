@@ -30,21 +30,22 @@ func _run() -> void:
 func _test_instance_controls() -> void:
 	var sim := AetherionSimulation.new()
 	sim.place_terrain(Vector2i(1, 1), "mud")
-	sim.place_terrain(Vector2i(2, 2), "mud")
+	sim.players[0]["essence"] = 8 # Two distinct species control fixture.
+	sim.place_terrain(Vector2i(2, 2), "cornfield")
 	sim.queue_play_card(0, "pig", Vector2i(1, 1))
-	sim.queue_play_card(0, "pig", Vector2i(2, 2))
+	sim.queue_play_card(0, "horse", Vector2i(2, 2))
 	sim.step()
-	# Wounds fixture isolates two copies' independent controls.
+	# Wounds fixture isolates two distinct species and independent controls.
 	sim.get_unit(1)["hp"] = 3
-	sim.get_unit(2)["hp"] = 3
+	sim.get_unit(2)["hp"] = 2
 	sim.natural.enabled = true
 	sim.queue_ecology(0, 1, false)
 	_ticks(sim, 8)
-	_check(sim.get_unit(1)["hp"] == 3 and sim.get_unit(2)["hp"] == 4, "Disabling one copy does not disable another copy's natural recovery")
+	_check(sim.get_unit(1)["hp"] == 3 and sim.get_unit(2)["hp"] == 4, "Disabling pig ecology does not disable the horse's recovery")
 	sim.queue_ecology(0, 1, true)
 	sim.queue_destination(0, 2, Vector2i(3, 2))
 	_ticks(sim, 12) # Up to four decision ticks plus the six-tick preparation.
-	_check(sim.get_unit(1)["hp"] == 4 and sim.get_unit(2)["cell"] == Vector2i(3, 2), "Enabling ecology on one copy preserves another copy's explicit movement")
+	_check(sim.get_unit(1)["hp"] == 4 and sim.get_unit(2)["cell"] == Vector2i(3, 2), "Enabling pig ecology preserves the horse's explicit movement")
 	sim.queue_hold(0, 2)
 	_ticks(sim, 100)
 	_check(sim.get_unit(2)["cell"] == Vector2i(3, 2) and sim.orders.active[2]["goal"]["kind"] == "hold", "Hold persists without autonomous movement")
@@ -106,29 +107,28 @@ func _test_copy_deadline() -> void:
 	sim.queue_play_card(0, "pig", Vector2i(3, 1))
 	sim.queue_play_card(1, "golem", Vector2i(4, 1))
 	sim.step()
-	var lost_copy: int = sim.get_unit(1)["copy_id"]
 	sim.queue_attack(2, 1)
 	sim.step()
 	var ready: int = sim.players[0]["recovering"][1]["ready_tick"]
 	sim.queue_play_card(0, "pig", Vector2i(1, 1))
 	sim.step()
-	_check(sim.get_unit(3)["copy_id"] != lost_copy and sim.cards.state(0, "pig", sim)["recovering"] == 1, "A free copy deploys while the defeated copy remains individually recovering")
-	while sim.tick_count < 120:
+	_check(sim.get_unit(3).is_empty() and sim.players[0]["essence"] == 2, "No replacement creature of a recovering species")
+	while sim.tick_count < 60:
 		sim.step()
-	sim.queue_play_card(0, "pig", Vector2i(0, 0))
+	sim.queue_play_card(0, "horse", Vector2i(0, 0))
 	sim.step()
-	_check(sim.get_unit(4)["copy_id"] != lost_copy, "Third active instance uses its own copy, not the defeated one")
+	_check(sim.get_unit(3).get("kind") == "horse", "A different species remains independently available")
 	while sim.tick_count < ready - 2:
 		sim.step()
 	var essence: int = sim.players[0]["essence"]
 	sim.queue_play_card(0, "pig", Vector2i(2, 0))
 	sim.step()
-	_check(sim.tick_count == ready - 1 and sim.get_unit(5).is_empty() and sim.players[0]["essence"] == essence, "Recovering copy cannot deploy one tick early and rejection spends no essence")
+	_check(sim.tick_count == ready - 1 and sim.get_unit(4).is_empty() and sim.players[0]["essence"] == essence, "Species cannot redeploy one tick before recovery completes")
 	sim.queue_play_card(0, "pig", Vector2i(2, 0))
 	sim.step()
-	_check(sim.tick_count == ready and sim.get_unit(5).get("copy_id") == lost_copy and not sim.players[0]["recovering"].has(1), "Exact recovery deadline releases only that copy for a new paid deployment")
-	_check(sim.get_unit(3).get("copy_id") == 1 and sim.get_unit(4).get("copy_id") == 2, "Other same-species copies remain active throughout recovery")
-	print("CHECK: defeated pig copy unavailable through tick %s; reusable at tick %s" % [ready - 1, ready])
+	_check(sim.tick_count == ready and sim.get_unit(4).get("copy_id") == 0 and not sim.players[0]["recovering"].has(1), "Unique species card becomes deployable at its exact deadline")
+	_check(sim.get_unit(3).get("kind") == "horse", "Another species remains active throughout recovery")
+	print("CHECK: authentic pig unavailable through tick %s; reusable at tick %s" % [ready - 1, ready])
 
 func _test_pig_counterplay() -> void:
 	var sim := AetherionSimulation.new()
@@ -203,10 +203,10 @@ func _frame_replay(fps: float) -> Array:
 			supplied = view.sim.tick_count
 			match supplied:
 				0: view.sim.queue_play_card(0, "pig", Vector2i(3, 0))
-				20: view.sim.queue_hold(0, 3)
-				40: view.sim.queue_stop(0, 3)
-				60: view.sim.queue_ecology(0, 3, false)
-				80: view.sim.queue_ecology(0, 3, true)
+				20: view.sim.queue_hold(0, 2)
+				40: view.sim.queue_stop(0, 2)
+				60: view.sim.queue_ecology(0, 2, false)
+				80: view.sim.queue_ecology(0, 2, true)
 		var before: int = view.sim.tick_count
 		view._process(1.0 / fps)
 		if before != view.sim.tick_count:

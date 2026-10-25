@@ -117,19 +117,24 @@ func _test_claims_and_copies() -> void:
 	var sim := AetherionSimulation.new()
 	sim.place_terrain(Vector2i(2, 1), "mud")
 	sim.queue_summon(0, "pig", Vector2i(1, 1))
-	sim.queue_summon(0, "pig", Vector2i(2, 2))
+	sim.queue_summon(1, "pig", Vector2i(4, 2))
+	sim.step()
+	# Rival legally enters the local half by explicit order before both seek mud.
+	sim.queue_destination(1, 2, Vector2i(2, 2))
+	_tick(sim, 20)
+	sim.queue_stop(1, 2)
 	sim.step()
 	sim.get_unit(1)["hp"] = 3
 	sim.get_unit(2)["hp"] = 3
 	sim.natural.enabled = true
 	sim.step()
-	_check(sim.natural.claims[Vector2i(2, 1)]["unit_id"] == 1, "Equal-age resource requests use stable ID tie break")
-	_check(sim.get_motion(2).is_empty(), "Second copy does not contend for a claimed resource")
+	_check(sim.natural.claims[Vector2i(2, 1)]["unit_id"] == 1, "Equal-age resource requests from opposing authentic pigs use stable ID")
+	_check(sim.get_motion(2).is_empty(), "Second player does not contend for claimed mud")
 	_tick(sim, 30)
-	_check(sim.get_unit(1)["hp"] == 4 and sim.get_unit(2)["hp"] == 3, "Copies retain independent health and natural state")
+	_check(sim.get_unit(1)["hp"] == 4 and sim.get_unit(2)["hp"] == 3, "Opposing authentic creatures keep independent health and state")
 	sim.queue_destination(0, 1, Vector2i(0, 1))
 	_tick(sim, 35)
-	_check(sim.get_unit(2)["hp"] == 4, "Waiting copy can recover after player frees occupied resource")
+	_check(sim.get_unit(2)["hp"] == 4, "Waiting rival recovers after an explicit order frees mud")
 	sim = _pig()
 	sim.step()
 	sim.get_unit(1)["hp"] = 0 # Death fixture, then normal cleanup.

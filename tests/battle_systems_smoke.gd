@@ -18,60 +18,33 @@ func _initialize() -> void:
 	_test_construction()
 	_test_hidden_core()
 	if failures == 0:
-		print("PASS: battle card economy, independent copies/recovery, terrain exchange, real refuge, construction and hidden core")
+		print("PASS: battle card economy, unique species/recovery, terrain exchange, real refuge, construction and hidden core")
 	quit(0 if failures == 0 else 1)
 
 func _test_copies() -> void:
 	var sim := AetherionSimulation.new()
-	sim.players[0]["essence"] = 8
 	sim.queue_play_card(0, "pig", Vector2i(3, 1))
 	sim.queue_play_card(0, "pig", Vector2i(2, 1))
+	sim.queue_play_card(1, "pig", Vector2i(4, 1))
 	sim.step()
-	_check(sim.units.size() == 2 and sim.get_unit(1)["copy_id"] != sim.get_unit(2)["copy_id"], "Same species can have distinct active copies")
-	_check(sim.cards.state(0, "pig", sim)["available"] == 1, "Provisional pool has three configurable copies")
-	sim.queue_summon(1, "boar", Vector2i(4, 1))
+	_check(sim.units.size() == 2 and sim.cards.state(0, "pig", sim)["active"] == 1 and sim.cards.state(1, "pig", sim)["active"] == 1, "One authentic pig per player; same species on opposite players is legal")
+	_check(sim.players[0]["essence"] == 2 and sim.cards.state(0, "pig", sim)["available"] == 0, "Second simultaneous summon rejects without charging")
+	sim.get_unit(1)["hp"] = 1 # Defeat fixture, attack damage unchanged.
+	sim.queue_attack(2, 1)
 	sim.step()
-	sim.get_unit(1)["hp"] = 1
-	sim.queue_attack(3, 1)
-	sim.step()
-	_check(sim.get_unit(1).is_empty() and sim.get_unit(2)["hp"] == 4, "Defeat affects only one instance")
-	_check(sim.players[0]["recovering"].has(1) and not sim.players[0]["recovering"].has(2), "Recovery is keyed by defeated instance, not species")
-	var state := sim.cards.state(0, "pig", sim)
-	_check(state["recovering"] == 1 and state["active"] == 1 and state["available"] == 1, "Recovery, activity and availability are separate")
+	var ready: int = sim.players[0]["recovering"][1]["ready_tick"]
 	sim.queue_play_card(0, "pig", Vector2i(1, 1))
-	sim.queue_destination(0, 2, Vector2i(2, 0))
 	sim.step()
-	_check(sim.get_unit(4)["kind"] == "pig" and sim.orders.active.has(2), "Other copies can deploy and receive orders during individual recovery")
-	_check(sim.cards.state(0, "pig", sim)["available"] == 0, "No over-allocation of copies")
-	var essence: int = sim.players[0]["essence"]
-	sim.queue_play_card(0, "pig", Vector2i(0, 0))
+	_check(sim.get_unit(3).is_empty() and sim.players[0]["essence"] == 2, "Recovering authentic species cannot be replaced with another copy")
+	_check(sim.cards.state(0, "pig", sim)["recovering"] == 1 and sim.cards.state(0, "pig", sim)["available"] == 0, "Defeated species stays unavailable")
+	while sim.tick_count < ready:
+		sim.step()
+	_check(sim.cards.state(0, "pig", sim)["available"] == 1 and sim.get_unit(1).is_empty(), "Recovery returns the card, never an automatic unit")
+	sim.queue_play_card(0, "pig", Vector2i(1, 1))
 	sim.step()
-	_check(sim.units.size() == 3 and sim.players[0]["essence"] == essence, "Rejected exhausted copy does not spend essence")
-	_ticks(sim, 238)
-	_check(sim.tick_count == 243 and sim.cards.state(0, "pig", sim)["available"] == 1, "Defeated copy returns exactly after its own recovery")
-	_check(sim.get_unit(1).is_empty(), "Recovery does not automatically respawn")
-	sim.cards.copies_per_species = 2
+	_check(sim.get_unit(3).get("copy_id") == 0 and sim.get_unit(2)["owner"] == 1, "After recovery a new unit uses the same unique species slot, independently of the rival")
 	sim.reset()
-	_check(sim.cards.state(0, "pig", sim)["available"] == 2, "Pool count configurable on reset")
-	sim = AetherionSimulation.new()
-	sim.queue_summon(0, "pig", Vector2i(3, 1))
-	sim.queue_summon(0, "pig", Vector2i(3, 2))
-	sim.queue_summon(1, "boar", Vector2i(4, 1))
-	sim.step()
-	sim.get_unit(1)["hp"] = 1
-	sim.get_unit(2)["hp"] = 1
-	sim.queue_attack(3, 1)
-	sim.step()
-	sim.get_unit(3)["cell"] = Vector2i(4, 2) # Independent second-defeat fixture.
-	sim.get_unit(3)["ready_tick"] = 0
-	sim.step()
-	sim.queue_attack(3, 2)
-	sim.step()
-	_check(sim.players[0]["recovering"][1]["ready_tick"] == 242 and sim.players[0]["recovering"][2]["ready_tick"] == 244, "Two defeated copies keep different recovery deadlines")
-	_ticks(sim, 238)
-	_check(sim.tick_count == 242 and sim.cards.state(0, "pig", sim)["recovering"] == 1 and sim.cards.state(0, "pig", sim)["available"] == 2, "Recovering first copy does not prematurely release or delay second copy")
-	_ticks(sim, 2)
-	_check(sim.cards.state(0, "pig", sim)["available"] == 3, "All copies return independently at their deadlines")
+	_check(sim.cards.state(0, "pig", sim)["available"] == 1 and sim.cards.copies[0]["pig"].size() == 1, "Reset always restores one authentic species slot")
 
 func _test_cards_and_terrain() -> void:
 	var sim := AetherionSimulation.new()

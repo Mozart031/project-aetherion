@@ -1,11 +1,13 @@
 extends Node2D
 
 const BoardCoordinates = preload("res://scripts/board_coordinates.gd")
+signal simulation_stepped
 
 var sim := AetherionSimulation.new()
 var accumulator := 0.0
 var auto_attack := true
 var selected_unit_id := -1
+var tactical_input_enabled := true
 const LOCAL_PLAYER := 0
 
 func _ready() -> void:
@@ -23,6 +25,7 @@ func _process(delta: float) -> void:
 		sim.step()
 		_clear_defeated_selection()
 		_after_sim_step()
+		simulation_stepped.emit()
 		accumulator -= AetherionSimulation.TICK_SECONDS
 	queue_redraw()
 
@@ -34,6 +37,8 @@ func _clear_defeated_selection() -> void:
 		selected_unit_id = -1
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not tactical_input_enabled:
+		return
 	if event is InputEventMouseButton:
 		if event.device != InputEvent.DEVICE_ID_EMULATION and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			_select_at_viewport_position(event.position)
