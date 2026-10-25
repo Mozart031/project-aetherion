@@ -2,7 +2,8 @@ extends RefCounted
 class_name AetherionSimulation
 
 ## Deterministic rules scaffold. One step equals 1/20 second.
-## No networking, movement, AI or terrain effects yet.
+## No networking, autonomous AI or terrain effects yet.
+const Movement = preload("res://scripts/movement.gd")
 const WIDTH := 8
 const HEIGHT := 4
 const TICK_RATE := 20
@@ -28,6 +29,8 @@ var events: Array[Dictionary] = []
 var next_unit_id := 1
 var finished := false
 var winner := -1
+var movement := Movement.new()
+var move_duration_ticks := 6
 
 func _init() -> void:
 	reset()
@@ -40,9 +43,10 @@ func reset() -> void:
 	units.clear()
 	queued_commands.clear()
 	events.clear()
+	movement.reset()
 	players = [
-		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "recovering": {}},
-		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "recovering": {}}
+		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "core_known_to": [true, false], "recovering": {}},
+		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "core_known_to": [false, true], "recovering": {}}
 	]
 
 func owns_cell(player: int, cell: Vector2i) -> bool:
@@ -61,6 +65,26 @@ func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
 
 func queue_attack(attacker_id: int, defender_id: int) -> void:
 	queued_commands.append({"type": "attack", "attacker": attacker_id, "defender": defender_id})
+
+func queue_move(player: int, unit_id: int, destination: Vector2i) -> void:
+	if not finished:
+		queued_commands.append({"type": "move", "player": player, "unit_id": unit_id, "cell": destination})
+
+func can_move(player: int, unit_id: int, destination: Vector2i) -> bool:
+	return not finished and movement.can_move(get_unit(unit_id), player, destination, movement.occupied_cells(units), movement.active)
+
+func get_motion(unit_id: int) -> Dictionary:
+	return movement.active.get(unit_id, {}).duplicate(true)
+
+func get_player_view(observer: int) -> Dictionary:
+	if observer not in [0, 1]:
+		return {}
+	var visible_players := players.duplicate(true)
+	for player in visible_players:
+		if not player["core_known_to"][observer]:
+			player.erase("core_cell")
+		player.erase("core_known_to")
+	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "motions": movement.active.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
@@ -91,6 +115,9 @@ func step() -> void:
 	for command in commands:
 		if command["type"] == "summon":
 			_apply_summon(command)
+	# Snapshot before damage/arrivals: no swaps, chains or arrival-tick redirection.
+	var occupied := movement.occupied_cells(units)
+	var busy := movement.active.duplicate(true)
 
 	var unit_damage: Dictionary = {}
 	var core_damage := [0, 0]
@@ -108,6 +135,9 @@ func step() -> void:
 				var attacker := get_unit(int(command["attacker"]))
 				var defending_player: int = int(command["defender"])
 				if not attacker.is_empty() and defending_player in [0, 1]:
+					# Reject hidden-core attacks before any coordinate-dependent check.
+					if not players[defending_player]["core_known_to"][int(attacker["owner"])]:
+						continue
 					if attacker["owner"] != defending_player and attacker["cell"] == players[defending_player]["core_cell"] and tick_count >= int(attacker["ready_tick"]):
 						var atk: int = int(CARD_STATS[attacker["kind"]]["atk"])
 						if atk > 0:
@@ -129,7 +159,13 @@ func step() -> void:
 		else:
 			survivors.append(unit)
 	units = survivors
+	# Accepted attacks use the origin and apply damage before any arrival.
+	events.append_array(movement.advance(units, tick_count))
 	_check_end()
+	if finished:
+		movement.reset()
+	else:
+		events.append_array(movement.resolve(commands, units, tick_count, move_duration_ticks, occupied, busy))
 
 func _apply_summon(command: Dictionary) -> void:
 	var player: int = int(command["player"])
@@ -139,6 +175,8 @@ func _apply_summon(command: Dictionary) -> void:
 		return
 	var stats: Dictionary = CARD_STATS[kind]
 	if int(players[player]["essence"]) < int(stats["cost"]) or players[player]["recovering"].has(kind):
+		return
+	if movement.reservations.has(cell):
 		return
 	for unit in units:
 		if unit["cell"] == cell:

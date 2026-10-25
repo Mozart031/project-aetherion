@@ -35,7 +35,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 - `scenes/main.tscn`: escena principal.
 - `scripts/main.gd`: demo `Node2D` con cuadrícula y dos círculos, `auto_attack := true`.
 - `scripts/simulation.gd`: `AetherionSimulation`, 8×4, 20 ticks/s, invocación, ataque, esencia, daño, recuperación y fin de partida.
-- **Todavía no** hay movimiento completo, tablero 3D, UI final de cartas, animaciones ni red. Verificar el código actual antes de cada tarea: este estado puede cambiar.
+- `main` incluye la prueba técnica de movimiento básico aprobada visualmente, descrita abajo. Todavía no hay tablero 3D, UI final de cartas, animaciones de personajes ni red. Verificar el código actual antes de cada tarea: este estado puede cambiar.
 
 ## Reglas de ingeniería
 
@@ -70,14 +70,16 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 - Fase 20.1B aprobada por el propietario tras pruebas visuales en Godot e integrada en `main` desde `codex/phase-20-1b-selection-health` (commit de funcionalidad `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`): selección propia por clic/toque, resaltado, barras de vida, coordenadas adaptadas a la ventana y limpieza tras derrota. La simulación y las reglas de combate se conservan; ver validación en `docs/ROADMAP.md`.
 - Primera parte de la Fase 20.1C aprobada por el propietario e integrada en `main` desde `codex/phase-20-1c-vertical-board`, commit de funcionalidad `d529b93c5f2b4d910d3c11b2bb52fe9b888e6e78`: adaptador reversible de lógica 8×4 a vista 4×8 para dibujo y selección, rival arriba y jugador local abajo. Pruebas de coordenadas, presentación, combate y arranque repetidas y aprobadas en Godot 4.7.2. UID locales conservados e incorporados al control de versiones. Sin cambios de simulación ni movimiento implementado.
 
-## Parámetros iniciales de movimiento aprobados, aún sin implementar
+## Movimiento básico aprobado e integrado
 
 - Prueba técnica manual de un paso ortogonal libre: **6 ticks por paso** (0,3 segundos a 20 Hz), origen ocupado y destino reservado durante el trayecto.
 - Sin coste de esencia; entrada permitida al territorio rival; rechazo determinista de conflictos; movimiento independiente del cooldown de ataque.
 - El movimiento no puede cancelar daño ya aceptado. Proteger Núcleos ocultos frente a filtraciones por consultas, resaltados o ataques.
 - Mantener separados ejecución de movimiento, futuros comportamientos naturales y órdenes especiales. Sin IA autónoma, rutas largas ni habilidades en este incremento.
 - El control manual de una casilla es exclusivamente una prueba técnica: el diseño final permitirá ordenar destinos sin controlar cada paso.
-- No implementar movimiento todavía. La política de ataques activos y el descubrimiento del Núcleo requieren aprobación de las propuestas concretas en `docs/PHASE_20_1C.md` antes de codificar reglas que aún no están definidas.
+- Implementación revisada por TARS y aprobada visualmente por el propietario: selección y desplazamiento a celda vecina comprobados en Godot. Integrada en `main` desde `codex/phase-20-1c-basic-movement`, commit de funcionalidad `487a6b3be304b3d5c42408878b3561ee0b177e12`. Cinco suites automatizadas y arranque repetidos con éxito en Godot 4.7.2; integración sin conflictos ni cambios de jugabilidad adicionales. Ver reglas exactas y pruebas en `docs/PHASE_20_1C.md`.
+- Conservar el combate instantáneo: evaluar ataques en la celda lógica de origen, aplicar daño simultáneo y derrotas antes de confirmar llegadas. No introducir ventanas de ataque activo ni bloquear desplazamiento por cooldown. No se añaden funciones de retirada/intercambio.
+- Decisión adicional del propietario: mantener oculto el Núcleo rival en el prototipo; rechazar ataques mientras no esté descubierto. El estado descubierto se prueba únicamente con fixtures. No implementar aún una mecánica de descubrimiento ni revelar al entrar en su celda.
 
 ## Próxima meta: prototipo interactivo
 

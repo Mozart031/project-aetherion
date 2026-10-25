@@ -31,7 +31,7 @@ func _clear_defeated_selection() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if event.device != InputEvent.DEVICE_ID_EMULATION and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			_select_at_viewport_position(event.position)
 	elif event is InputEventScreenTouch:
 		if event.index == 0 and event.pressed:
@@ -55,13 +55,30 @@ func _cell_at_viewport_position(viewport_position: Vector2) -> Vector2i:
 
 func _select_at_viewport_position(viewport_position: Vector2) -> void:
 	var cell := _cell_at_viewport_position(viewport_position)
-	selected_unit_id = -1
-	for unit in sim.units:
-		if int(unit["owner"]) == LOCAL_PLAYER and unit["cell"] == cell:
+	var local_position := get_global_transform_with_canvas().affine_inverse() * viewport_position
+	var board := _board_rect()
+	var cell_size := board.size.x / BoardCoordinates.VISUAL_WIDTH
+	for unit in sim.get_player_view(LOCAL_PLAYER)["units"]:
+		var drawn_position := board.position + (_unit_visual_cell(unit) + Vector2.ONE * 0.5) * cell_size
+		if int(unit["owner"]) == LOCAL_PLAYER and (unit["cell"] == cell or local_position.distance_to(drawn_position) <= cell_size * 0.32):
 			selected_unit_id = int(unit["id"])
-			break
-	# Selection is idempotent: an emulated mouse press after a touch cannot toggle it.
+			queue_redraw()
+			return
+	if selected_unit_id != -1 and sim.can_move(LOCAL_PLAYER, selected_unit_id, cell):
+		sim.queue_move(LOCAL_PLAYER, selected_unit_id, cell)
+	else:
+		selected_unit_id = -1
 	queue_redraw()
+
+func _unit_visual_cell(unit: Dictionary) -> Vector2:
+	var motion := sim.get_motion(int(unit["id"]))
+	if motion.is_empty():
+		return Vector2(BoardCoordinates.logical_to_visual(unit["cell"], LOCAL_PLAYER))
+	var visual_from := Vector2(BoardCoordinates.logical_to_visual(motion["from"], LOCAL_PLAYER))
+	var visual_to := Vector2(BoardCoordinates.logical_to_visual(motion["to"], LOCAL_PLAYER))
+	var tick_time := float(sim.tick_count) + accumulator / AetherionSimulation.TICK_SECONDS
+	var progress := clampf((tick_time - float(motion["start_tick"])) / float(int(motion["end_tick"]) - int(motion["start_tick"])), 0.0, 1.0)
+	return visual_from.lerp(visual_to, progress)
 
 func _draw() -> void:
 	var board := _board_rect()
@@ -72,10 +89,8 @@ func _draw() -> void:
 			var visual_cell := BoardCoordinates.logical_to_visual(Vector2i(x, y), LOCAL_PLAYER)
 			var rect := Rect2(origin + Vector2(visual_cell) * cell_size, Vector2.ONE * (cell_size - 2.0))
 			draw_rect(rect, Color(0.16, 0.30, 0.24) if x < 4 else Color(0.30, 0.20, 0.30))
-	for unit in sim.units:
-		var cell: Vector2i = unit["cell"]
-		var visual_cell := BoardCoordinates.logical_to_visual(cell, LOCAL_PLAYER)
-		var pos := origin + Vector2(visual_cell) * cell_size + Vector2.ONE * cell_size * 0.5
+	for unit in sim.get_player_view(LOCAL_PLAYER)["units"]:
+		var pos := origin + _unit_visual_cell(unit) * cell_size + Vector2.ONE * cell_size * 0.5
 		if int(unit["id"]) == selected_unit_id:
 			draw_arc(pos, cell_size * 0.36, 0.0, TAU, 48, Color(1.0, 0.95, 0.3), maxf(2.0, cell_size * 0.04), true)
 		draw_circle(pos, cell_size * 0.28, Color(0.30, 0.78, 0.95) if int(unit["owner"]) == 0 else Color(1.0, 0.55, 0.28))
