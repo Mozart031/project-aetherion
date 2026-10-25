@@ -15,3 +15,6 @@ const CARDS := {
 const CATEGORIES := ["creature", "terrain", "construction", "trick"]
 const CATEGORY_LABELS := ["Criatura", "Terreno", "Construcción", "Truco"]
 const SPECIES_LABELS := {"pig": "Ce", "boar": "Ja", "horse": "Ca", "golem": "Go"}
+
+static func target_mode(id: String) -> String:
+	return "own_wounded_unit" if CARDS.get(id, {}).get("category") == "trick" else "own_cell"

@@ -10,6 +10,7 @@ const TerrainEffects = preload("res://scripts/terrain_effects.gd")
 const ContextActions = preload("res://scripts/context_actions.gd")
 const BattleCards = preload("res://scripts/battle_cards.gd")
 const NaturalIntents = preload("res://scripts/natural_intents.gd")
+const MatchLoadout = preload("res://scripts/match_loadout.gd")
 const WIDTH := 8
 const HEIGHT := 4
 const TICK_RATE := 20
@@ -45,6 +46,7 @@ var terrain := TerrainEffects.new()
 var actions := ContextActions.new()
 var cards := BattleCards.new()
 var natural := NaturalIntents.new()
+var loadouts := [MatchLoadout.new(), MatchLoadout.new()]
 
 func _init() -> void:
 	reset()
@@ -132,9 +134,18 @@ func queue_special(player: int, unit_id: int, kind: String, target_id: int = -1)
 	if not finished:
 		queued_commands.append({"type": "special", "player": player, "unit_id": unit_id, "kind": kind, "target_id": target_id})
 
-func queue_play_card(player: int, card: String, cell: Vector2i, target_id: int = -1) -> void:
+func configure_loadout(player: int, equipped: Dictionary) -> bool:
+	return tick_count == 0 and player in [0, 1] and loadouts[player].configure(equipped)
+
+func get_card_placement(player: int, card: String, cell: Vector2i, target_id: int = -1) -> Dictionary:
+	return cards.validate_play({"player": player, "card": card, "cell": cell, "target_id": target_id}, self, queued_commands)
+
+func queue_play_card(player: int, card: String, cell: Vector2i, target_id: int = -1, request_id: int = -1) -> void:
 	if not finished:
-		queued_commands.append({"type": "play_card", "player": player, "card": card, "cell": cell, "target_id": target_id})
+		var command := {"type": "play_card", "player": player, "card": card, "cell": cell, "target_id": target_id}
+		if request_id >= 0:
+			command["request_id"] = request_id
+		queued_commands.append(command)
 
 func occupied_cells() -> Dictionary:
 	var result := movement.occupied_cells(units)
@@ -199,7 +210,8 @@ func get_player_view(observer: int) -> Dictionary:
 	var card_states := {}
 	for kind in BattleCards.Catalog.CARDS:
 		card_states[kind] = cards.state(observer, kind, self)
-	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "buildings": cards.buildings.duplicate(true), "cards": card_states, "motions": movement.active.duplicate(true), "actions": actions.active.duplicate(true), "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": events.duplicate(true), "finished": finished, "winner": winner}
+	var observed_events := events.filter(func(event): return event["type"] != "card_result" or event["player"] == observer)
+	return {"tick": tick_count, "players": visible_players, "units": units.duplicate(true), "buildings": cards.buildings.duplicate(true), "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": movement.active.duplicate(true), "actions": actions.active.duplicate(true), "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "events": observed_events.duplicate(true), "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
