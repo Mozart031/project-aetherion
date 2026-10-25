@@ -33,6 +33,7 @@ func _initialize() -> void:
 	_test_preparation()
 	_test_release()
 	_test_boundary()
+	_test_pending_orders()
 	if failures == 0:
 		print("PASS: directed cooldown lock, full demolition preparation, pursuit/release, pure preview and exact next-tick boundary")
 	quit(0 if failures == 0 else 1)
@@ -115,3 +116,18 @@ func _test_boundary() -> void:
 	defense.get_unit(1)["ready_tick"] = 20
 	defense.get_unit(2)["ready_tick"] = defense.tick_count + 1
 	_attempt(defense, Vector2i(3, 1), false)
+
+func _test_pending_orders() -> void:
+	for conflict in ["contradictory", "mixed", "invalid_action", "foreign"]:
+		var sim := _fight()
+		match conflict:
+			"contradictory":
+				sim.queue_target(1, 2, 1)
+				sim.queue_stop(1, 2)
+			"mixed":
+				sim.queue_target(1, 2, 1)
+				sim.queue_special(1, 2, "enter")
+			"invalid_action": sim.queue_act_at(1, 2, "forage", Vector2i(3, 1), 1)
+			"foreign": sim.queue_target(0, 2, 1)
+		_attempt(sim, Vector2i(3, 1), true)
+		_check(sim.get_unit(1)["hp"] == 4, "Rejected/foreign intents cannot create damage or a persistent exchange lock")

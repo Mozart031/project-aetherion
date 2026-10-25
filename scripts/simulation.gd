@@ -99,13 +99,15 @@ func place_core(player: int, cell: Vector2i) -> bool:
 	return true
 
 func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
-	queued_commands.append({"type": "summon", "player": player, "kind": kind, "cell": cell})
+	if not finished:
+		queued_commands.append({"type": "summon", "player": player, "kind": kind, "cell": cell})
 
 func place_terrain(cell: Vector2i, kind: String) -> bool:
 	return tick_count == 0 and terrain.place(cell, kind)
 
 func queue_attack(attacker_id: int, defender_id: int) -> void:
-	queued_commands.append({"type": "attack", "attacker": attacker_id, "defender": defender_id})
+	if not finished:
+		queued_commands.append({"type": "attack", "attacker": attacker_id, "defender": defender_id})
 
 func queue_move(player: int, unit_id: int, destination: Vector2i) -> void:
 	if not finished:
@@ -175,6 +177,18 @@ func get_target(id: int) -> Dictionary:
 	var unit := get_unit(id)
 	return cards.get_building(id) if unit.is_empty() else unit
 
+func _pending_goal(unit: Dictionary, commands: Array) -> Dictionary:
+	# Match the existing order/mixed-command rejection policy without ingesting.
+	var goals: Array[Dictionary] = []
+	for command in commands:
+		if command["type"] not in ["order", "special"] or command["unit_id"] != unit["id"] or command["player"] != unit["owner"]:
+			continue
+		if command["type"] == "special":
+			return {}
+		if command["goal"] not in goals:
+			goals.append(command["goal"])
+	return goals[0] if goals.size() == 1 else {}
+
 func cell_under_attack(cell: Vector2i, commands: Array, at_tick: int = -1) -> bool:
 	if finished:
 		return false
@@ -196,23 +210,21 @@ func cell_under_attack(cell: Vector2i, commands: Array, at_tick: int = -1) -> bo
 			var goal: Dictionary = orders.active.get(attacker["id"], {}).get("goal", {})
 			if goal.get("kind") == "attack_target" and goal.get("target_id") == target["id"] and _in_combat_position(attacker, target):
 				return true
-			for command in commands:
-				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("kind") == "attack_target" and command["goal"].get("target_id") == target["id"] and _in_combat_position(attacker, target):
-					return true
+			var pending := _pending_goal(attacker, commands)
+			if pending.get("kind") == "attack_target" and pending.get("target_id") == target["id"] and _in_combat_position(attacker, target):
+				return true
 			# Instant attacks/reactive defense keep their existing damage-ready rule.
 			if not _can_attack(attacker, target, false, at_tick):
 				continue
 			if goal.get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
+				return true
+			if pending.get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
 				return true
 			for reaction in natural_defense.produce(self, commands):
 				if reaction["attacker"] == attacker["id"] and reaction["defender"] == target["id"]:
 					return true
 			for command in commands:
 				if command["type"] == "attack" and command["attacker"] == attacker["id"] and command["defender"] == target["id"]:
-					return true
-				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("target_id") == target["id"]:
-					return true
-				if command["type"] == "order" and command["player"] == attacker["owner"] and command["unit_id"] == attacker["id"] and command["goal"].get("kind") == "hold" and not movement.active.has(attacker["id"]) and natural_defense.target_for(attacker, self, false) == target["id"]:
 					return true
 	return false
 
@@ -278,7 +290,8 @@ func get_player_view(observer: int) -> Dictionary:
 	return {"tick": tick_count, "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "terrain_owners": visible_terrain_owners, "events": observed_events, "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
-	queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
+	if not finished:
+		queued_commands.append({"type": "core_attack", "attacker": attacker_id, "defender": defending_player})
 
 func get_unit(unit_id: int) -> Dictionary:
 	for unit in units:
