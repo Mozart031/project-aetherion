@@ -1,6 +1,6 @@
 # Fase 23 — pilas circulares de cartas
 
-**Estado: diseño técnico para revisión. No implementado.** Los requisitos de pilas y gestos proceden de la orden del director creativo; las decisiones técnicas siguientes son propuestas. La Fase 22 permanece en su rama, pendiente de revisión de TARS y autorización final. No iniciar implementación completa ni integrar en `main` por el mero hecho de publicar este documento.
+**Estado: diseño técnico revisado favorablemente por TARS. Reglas centrales confirmadas por el director creativo; no implementado.** Los requisitos de pilas y gestos proceden de la orden del director creativo; las decisiones técnicas siguientes son propuestas. La Fase 22 permanece en su rama, con revisión técnica favorable y preparación de integración autorizada; pendiente de confirmación definitiva del director creativo. No iniciar implementación completa ni integrar en `main` por el mero hecho de publicar este documento.
 
 ## Resultado previsto y reglas que se conservan
 
@@ -60,7 +60,7 @@ Cada pila tiene una zona `Control` propia. Umbral vertical configurable, inicial
 4. Confirmar envía un único comando con `request_id`; pasar a estado «enviando» hasta el tick de respuesta, sin nuevas confirmaciones duplicadas. Se revalidan esencia, copia y destino en ese tick. Un resaltado anterior no garantiza aceptación: el combate sigue cambiando.
 5. Aceptación actualiza inventario/efectos desde la simulación. Rechazo no gasta esencia ni consume copia y permite corregir el borrador con explicación. Si ya no existe su objetivo (p. ej. criatura a curar), volver a pedir un objetivo válido.
 
-No se propone rotación automática al jugar una carta: conservar el índice después de éxito o cancelación; solo el gesto hacia abajo rota. Esta elección evita añadir una regla de robo/rotación no solicitada y debe confirmarse en la revisión de UX.
+**Regla confirmada por el director creativo:** después de colocar una carta, esa misma carta permanece arriba. Conservar el índice después de éxito o cancelación; la pila solo cambia mediante el gesto hacia abajo. No introducir rotación automática al jugar, morir o recuperarse una copia, ni robo aleatorio.
 
 Mientras hay borrador, se mantiene la selección táctica anterior si su criatura sigue viva, sin emitir nuevas órdenes de tablero por los toques de colocación. Las órdenes ya aceptadas continúan. Otra pila puede rotarse independientemente; rotar la pila de origen cancela primero su borrador, y después realiza la rotación solicitada. Deslizar arriba en otra pila reemplaza el borrador anterior sin gasto. Durante la breve espera de respuesta se bloquean nuevas confirmaciones para evitar doble despliegue.
 
@@ -111,6 +111,7 @@ Tras revisión de TARS y autorización del propietario, integrar primero Fase 22
 | Área | Casos obligatorios |
 | --- | --- |
 | Circularidad | Secuencia de cuatro especies reales; N avances vuelven al inicio; independencia de cuatro cursores; listas vacías/de un elemento; tipos indisponibles permanecen navegables. |
+| Carta superior tras jugar | Despliegue aceptado conserva exactamente el tipo superior y los cuatro cursores; rechazo/cancelación tampoco rotan. Solo un gesto hacia abajo de esa pila cambia su índice. |
 | Tipos y copias | Un tipo con tres copias ocupa una entrada; derrota/recuperación por copia no rota la pila; un tipo diferente siempre tiene identidad/etiqueta distinta. Configuración futura de catálogo no exige cambios del control. |
 | Equipamiento | Solo IDs equipados/categoría válida; orden estable; rechazo de configuración inválida sin partida parcialmente inicializada. Casos futuros con dos construcciones/trucos mediante fixtures, sin añadir cartas de jugabilidad. |
 | Gestos | Umbrales, arrastre horizontal, inversión de dirección, un avance por gesto largo, varios dedos, ratón emulado y captura hasta liberar; ausencia de órdenes tácticas accidentales. |
@@ -124,11 +125,11 @@ Tras revisión de TARS y autorización del propietario, integrar primero Fase 22
 
 Las pruebas de Fase 23 son **propuestas, aún no escritas ni ejecutadas**. Comprobar en Godot 4.7.2 y separar eventos táctiles sintéticos de pruebas Android reales.
 
-## Decisiones que debe confirmar la revisión
+## Decisiones confirmadas y detalles pendientes
 
-1. Conservar la carta superior después de un despliegue; no introducir rotación automática o robo aleatorio. La orden actual define rotación manual hacia abajo, no el efecto automático de jugar.
+1. **Confirmado:** cuatro pilas independientes; abajo recorre circularmente, arriba inicia colocación; una especie distinta es una entrada y sus copias son inventario separado. Después de colocar, la misma carta permanece arriba; solo el gesto hacia abajo cambia la pila.
 2. Confirmar el gesto rápido propuesto: soltar sobre tablero válido confirma; terminar el deslizamiento cerca de la pila arma para un toque posterior. Cancelación explícita siempre sin gasto.
 3. Equipamiento inicial de demo: todos los tipos actuales, una entrada por tipo con sus copias existentes. Sin cuotas, selección de colección o multiplicación de entradas por copia; límites de mazo y más cartas se acuerdan aparte.
 4. Admitir la limitación real de una sola construcción y un solo truco actuales; no añadir efectos nuevos para simular pilas mayores sin aprobación.
 
-No convertir estas propuestas en reglas definitivas por implementación implícita. El objetivo es variedad de tipos y controles táctiles rápidos conservando la autoridad del jugador y el combate existente.
+Las reglas centrales de pilas, gestos y conservación de carta superior están confirmadas. No convertir los detalles pendientes en reglas definitivas por implementación implícita. El objetivo es variedad de tipos y controles táctiles rápidos conservando la autoridad del jugador y el combate existente. No implementar estadísticas definitivas de vida ni convertir el proyecto a 3D en esta preparación.

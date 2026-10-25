@@ -1,8 +1,8 @@
 # Fase 22 — dinamismo y profundidad de batalla
 
-**Estado: ambos bloques autorizados por TARS y Dirección Creativa e implementados en `codex/phase-22-battle-depth`, desde `main` `1c740d6`. No integrados; pendientes de revisión técnica y validación visual del propietario.** Base: Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`. Se mantienen estadísticas, economía y resolución simultánea aprobadas.
+**Estado: ambos bloques autorizados por TARS y Dirección Creativa e implementados en `codex/phase-22-battle-depth`, desde `main` `1c740d6`. Revisión técnica de TARS favorable; preparación de integración autorizada. No integrados: falta confirmación definitiva del director creativo.** Base: Fase 21 integrada en `765bc8a72a8d82dbe93f1a4633c13afc24b047ff`. Se mantienen estadísticas, economía y resolución simultánea aprobadas.
 
-**Actualización de cierre:** Dirección Creativa comunicó prueba manual positiva, sin aprobación completa. [Informe final de verificación](PHASE_22_FINAL_REVIEW.md): 19 suites, dos arranques e importación aprobados en Godot 4.7.2; nueva suite de cierre y documentación, sin cambios al código jugable de `2cda472`. Se explicitan límites de resultado de partida, reloj ante bloqueos y balance. No integrar hasta revisión de TARS y autorización final del propietario. Fase 23 solo tiene [diseño técnico](PHASE_23.md), sin implementación.
+**Actualización de cierre:** Dirección Creativa comunicó prueba manual positiva, sin aprobación completa. [Informe final de verificación](PHASE_22_FINAL_REVIEW.md): 19 suites, dos arranques e importación aprobados en Godot 4.7.2; nueva suite de cierre y documentación, sin cambios al código jugable de `2cda472`. Se explicitan límites de resultado de partida, reloj ante bloqueos y balance. TARS revisó favorablemente el cierre; no integrar hasta la autorización final del director creativo. Fase 23 solo tiene [diseño técnico](PHASE_23.md), sin implementación.
 
 ## Resultado y forma de entrega
 
@@ -146,4 +146,4 @@ Importación de editor y arranque de escenas comprobados. Capturas renderizadas 
 - El terreno inicial del escenario es neutral; las cartas jugadas conservan propiedad/disponibilidad y economía anteriores. Los tests unitarios usan fixtures de heridas/posición donde se indica; el escenario integrado no utiliza esas alteraciones.
 - No hay cultivo regenerativo, movimiento sin propósito, salida automática del barro, continuación oculta tras demolición ni selección estratégica de objetivos distantes. Un recurso ocupado se espera o se elige otro; los conflictos físicos siguen rechazando todas las solicitudes en disputa.
 - Sin cambios en `movement.gd`, estadísticas, daños, esencia, recuperación por copia, cueva ni descubrimiento del Núcleo. «Mantener» participa en la comprobación existente de ataque activo para no permitir intercambios que la defensa anterior bloqueaba.
-- Pendientes: revisión de TARS, validación visual del propietario, tacto/rendimiento en Android real y balance de perfiles. No integrar en `main` hasta recibir aprobación.
+- Revisión técnica de TARS favorable. Pendientes: confirmación definitiva del director creativo, tacto/rendimiento en Android real y balance de perfiles. Conservar estadísticas provisionales y limitaciones del Núcleo. No integrar en `main` hasta recibir aprobación definitiva.

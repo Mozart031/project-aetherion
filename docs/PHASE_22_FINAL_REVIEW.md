@@ -2,7 +2,7 @@
 
 Fecha: 2026-10-25. Rama: `codex/phase-22-battle-depth`. Implementación revisada: `2cda47250c334671e54d4cb9a311c0b3b6b28997`; base `main`/`origin/main`: `1c740d6`. Estado inicial limpio y remoto comprobado.
 
-**Resultado técnico favorable con las limitaciones siguientes. No constituye autorización de integración.** El director creativo comunicó una prueba manual positiva de despliegue, selección, ataque dirigido, recuperación ecológica del cerdo y disponibilidad/recuperación de copias, indicando expresamente que no era aprobación completa. Se conserva ese estado: revisión de TARS y autorización final del director creativo pendientes.
+**Resultado técnico favorable con las limitaciones siguientes. No constituye autorización de integración.** El director creativo comunicó una prueba manual positiva de despliegue, selección, ataque dirigido, recuperación ecológica del cerdo y disponibilidad/recuperación de copias, indicando expresamente que no era aprobación completa. Actualización posterior: TARS comunicó revisión técnica favorable del informe y reconoció las 19 pruebas y limitaciones. Solo la preparación de integración está autorizada; falta confirmación definitiva del director creativo.
 
 ## Los ocho puntos solicitados
 
@@ -31,7 +31,7 @@ Cambiar radio, curación, consumo de barro, cooldown, daño o comportamiento de 
 2. El Núcleo rival continúa oculto y no tiene mecánica real de descubrimiento. Vaciar el escenario produce el mensaje de escenario despejado, **no una victoria de partida contra el Núcleo**. Las pruebas de resultados usan fixtures de vida/tiempo, no descubren el Núcleo durante la demo.
 3. La escena mantiene pasos fijos de 0,05 segundos con acumulador. El límite anterior de `delta` a 0,25 segundos evita una acumulación masiva después de un bloqueo: un frame de un segundo procesa cinco ticks, no veinte. Conserva consistencia de pasos pero pierde tiempo de pared durante pausas/bloqueos largos. No es todavía un reloj de red ni validación de rendimiento Android.
 
-Estas limitaciones deben ser aceptadas expresamente como parte del prototipo antes de cerrar la aprobación completa; no se han corregido mediante cambios de reglas en esta revisión. Android real, balance y validación visual final de los controles siguen pendientes.
+TARS reconoció estas limitaciones en su revisión técnica favorable. Se conservan documentadas y no se han corregido mediante cambios de reglas; la aprobación definitiva de integración corresponde al director creativo. Android real, balance y validación visual final de los controles siguen pendientes.
 
 ## Pruebas ejecutadas
 
@@ -58,4 +58,12 @@ La suite nueva utiliza fixtures señalados para heridas, cooldown y límites de 
 - Propuesta de Fase 23 en `docs/PHASE_23.md`, sin implementación.
 - **Sin cambios de jugabilidad, escenas, parámetros o dependencias. Sin integración en main.** El código jugable sigue siendo el de `2cda472`.
 
-Revisión siguiente: TARS evalúa estas evidencias y limitaciones; el director creativo completa la aprobación visual. Solo entonces se puede autorizar una integración segura y una nueva rama desde `main` para implementar Fase 23.
+Revisión técnica de TARS completada favorablemente. Paso siguiente: esperar confirmación definitiva del director creativo antes de fusionar. Fase 23 se trabajará después, bajo autorización de inicio, en rama nueva desde main actualizado con pruebas y revisión visual.
+
+## Preparación de integración confirmada
+
+Tras la autorización para preparar la integración, se comprobó Git local/remoto: rama limpia y sincronizada en `e8e7c08`; `main` y `origin/main` en `1c740d6`. `git merge-base --is-ancestor origin/main HEAD` devuelve 0 y la divergencia es `0 / 2`: main es ancestro de la rama, por lo que la integración del estado comprobado no requiere resolver conflictos. Esta preparación solo añade documentación, sin cambiar el código de jugabilidad revisado.
+
+Se repitieron **19/19 suites** y los arranques de `battle_demo.tscn` y `battle_depth_demo.tscn` en Godot `4.7.2.stable.official.ed1daf0bf`, sin errores de scripts. Se conservan las limitaciones de Núcleo, resultado/reloj, balance y Android descritas arriba, así como las estadísticas provisionales. No se convierte a 3D.
+
+Procedimiento pendiente, **solo después de confirmación definitiva del director creativo**: actualizar referencias remotas, comprobar de nuevo limpieza/UID y base de main, integrar preservando el historial de la rama, ejecutar regresiones/arranque sobre el resultado y publicar main. Si la base cambia, recalcular conflictos y validación antes de integrar. No se ha ejecutado ningún merge ni movido main durante esta preparación. No se crea todavía la rama de Fase 23.
