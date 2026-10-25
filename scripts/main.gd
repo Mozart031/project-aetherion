@@ -1,5 +1,7 @@
 extends Node2D
 
+const BoardCoordinates = preload("res://scripts/board_coordinates.gd")
+
 var sim := AetherionSimulation.new()
 var accumulator := 0.0
 var auto_attack := true
@@ -36,10 +38,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_select_at_viewport_position(event.position)
 
 func _board_rect() -> Rect2:
-	# Fit the full logical board inside either a portrait or landscape viewport.
+	# Fit the vertical presentation without changing logical simulation dimensions.
 	var available := get_viewport_rect().size - Vector2(32.0, 32.0)
-	var cell_size := maxf(1.0, minf(available.x / AetherionSimulation.WIDTH, available.y / AetherionSimulation.HEIGHT))
-	var board_size := Vector2(AetherionSimulation.WIDTH, AetherionSimulation.HEIGHT) * cell_size
+	var cell_size := maxf(1.0, minf(available.x / BoardCoordinates.VISUAL_WIDTH, available.y / BoardCoordinates.VISUAL_HEIGHT))
+	var board_size := Vector2(BoardCoordinates.VISUAL_WIDTH, BoardCoordinates.VISUAL_HEIGHT) * cell_size
 	return Rect2((get_viewport_rect().size - board_size) * 0.5, board_size)
 
 func _cell_at_viewport_position(viewport_position: Vector2) -> Vector2i:
@@ -48,8 +50,8 @@ func _cell_at_viewport_position(viewport_position: Vector2) -> Vector2i:
 	var board := _board_rect()
 	if not board.has_point(local_position):
 		return Vector2i(-1, -1)
-	var relative := (local_position - board.position) / (board.size.x / AetherionSimulation.WIDTH)
-	return Vector2i(floori(relative.x), floori(relative.y))
+	var relative := (local_position - board.position) / (board.size.x / BoardCoordinates.VISUAL_WIDTH)
+	return BoardCoordinates.visual_to_logical(Vector2i(floori(relative.x), floori(relative.y)), LOCAL_PLAYER)
 
 func _select_at_viewport_position(viewport_position: Vector2) -> void:
 	var cell := _cell_at_viewport_position(viewport_position)
@@ -63,15 +65,17 @@ func _select_at_viewport_position(viewport_position: Vector2) -> void:
 
 func _draw() -> void:
 	var board := _board_rect()
-	var cell_size := board.size.x / AetherionSimulation.WIDTH
+	var cell_size := board.size.x / BoardCoordinates.VISUAL_WIDTH
 	var origin := board.position
 	for y in range(AetherionSimulation.HEIGHT):
 		for x in range(AetherionSimulation.WIDTH):
-			var rect := Rect2(origin + Vector2(x, y) * cell_size, Vector2.ONE * (cell_size - 2.0))
+			var visual_cell := BoardCoordinates.logical_to_visual(Vector2i(x, y), LOCAL_PLAYER)
+			var rect := Rect2(origin + Vector2(visual_cell) * cell_size, Vector2.ONE * (cell_size - 2.0))
 			draw_rect(rect, Color(0.16, 0.30, 0.24) if x < 4 else Color(0.30, 0.20, 0.30))
 	for unit in sim.units:
 		var cell: Vector2i = unit["cell"]
-		var pos := origin + Vector2(cell) * cell_size + Vector2.ONE * cell_size * 0.5
+		var visual_cell := BoardCoordinates.logical_to_visual(cell, LOCAL_PLAYER)
+		var pos := origin + Vector2(visual_cell) * cell_size + Vector2.ONE * cell_size * 0.5
 		if int(unit["id"]) == selected_unit_id:
 			draw_arc(pos, cell_size * 0.36, 0.0, TAU, 48, Color(1.0, 0.95, 0.3), maxf(2.0, cell_size * 0.04), true)
 		draw_circle(pos, cell_size * 0.28, Color(0.30, 0.78, 0.95) if int(unit["owner"]) == 0 else Color(1.0, 0.55, 0.28))

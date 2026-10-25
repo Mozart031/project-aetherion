@@ -11,7 +11,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Reglas acordadas: no modificar sin aprobación
 
 1. **Tiempo real:** ambos jugadores actúan simultáneamente. La simulación puede operar a 20 ticks/segundo; esto no representa turnos.
-2. **Tablero:** 32 espacios, 16 por jugador. La distribución visual aprobada es vertical, **4 columnas × 8 filas**, con el rival arriba y el jugador local abajo. La simulación conserva por ahora sus coordenadas lógicas **8×4**; planificar una transformación reversible entre ambos espacios en presentación, sin modificar todavía la simulación. Separar esta lógica de la representación tridimensional. Los terrenos pueden tener diferentes longitudes.
+2. **Tablero:** 32 espacios, 16 por jugador. La distribución visual aprobada es vertical, **4 columnas × 8 filas**, con el rival arriba y el jugador local abajo. La simulación conserva por ahora sus coordenadas lógicas **8×4**; utilizar una transformación reversible entre ambos espacios en presentación, sin modificar la simulación para rotar la vista. Separar esta lógica de la representación tridimensional. Los terrenos pueden tener diferentes longitudes.
 3. **Núcleo oculto:** cada jugador lo coloca en su territorio; el rival debe descubrirlo y destruirlo. Señal de equilibrio hacia mitad de partida, aún por concretar.
 4. **Bloqueo bajo ataque:** no se permite retirar/intercambiar criatura, terreno o construcción mientras sea objetivo de un ataque activo. Se puede jugar en otras zonas.
 5. **Recuperación:** las cartas derrotadas por combate o desastre entran en cooldown; después vuelven a estar disponibles, **no reaparecen automáticamente**.
@@ -68,7 +68,16 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 - Fase 20.1A completada y publicada en `main`: `5319303d62698a48f1471b69c2b2eb91775ad5b2`. Corrección de la expectativa de HP del jabalí y pruebas de simultaneidad, cooldowns y comandos duplicados; validadas en Godot 4.7.2. Sin cambios en reglas, arquitectura, escenas ni interfaces.
 - Fase 20.1B aprobada por el propietario tras pruebas visuales en Godot e integrada en `main` desde `codex/phase-20-1b-selection-health` (commit de funcionalidad `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`): selección propia por clic/toque, resaltado, barras de vida, coordenadas adaptadas a la ventana y limpieza tras derrota. La simulación y las reglas de combate se conservan; ver validación en `docs/ROADMAP.md`.
-- Distribución visual 4×8 aprobada; su transformación desde la lógica 8×4 se planifica para la Fase 20.1C. La demo integrada aún dibuja 8×4. Ver `docs/PHASE_20_1C.md`: propuesta técnica solamente; movimiento y reglas pendientes requieren aprobación antes de implementarse.
+- Primera parte de la Fase 20.1C aprobada por el propietario e integrada en `main` desde `codex/phase-20-1c-vertical-board`, commit de funcionalidad `d529b93c5f2b4d910d3c11b2bb52fe9b888e6e78`: adaptador reversible de lógica 8×4 a vista 4×8 para dibujo y selección, rival arriba y jugador local abajo. Pruebas de coordenadas, presentación, combate y arranque repetidas y aprobadas en Godot 4.7.2. UID locales conservados e incorporados al control de versiones. Sin cambios de simulación ni movimiento implementado.
+
+## Parámetros iniciales de movimiento aprobados, aún sin implementar
+
+- Prueba técnica manual de un paso ortogonal libre: **6 ticks por paso** (0,3 segundos a 20 Hz), origen ocupado y destino reservado durante el trayecto.
+- Sin coste de esencia; entrada permitida al territorio rival; rechazo determinista de conflictos; movimiento independiente del cooldown de ataque.
+- El movimiento no puede cancelar daño ya aceptado. Proteger Núcleos ocultos frente a filtraciones por consultas, resaltados o ataques.
+- Mantener separados ejecución de movimiento, futuros comportamientos naturales y órdenes especiales. Sin IA autónoma, rutas largas ni habilidades en este incremento.
+- El control manual de una casilla es exclusivamente una prueba técnica: el diseño final permitirá ordenar destinos sin controlar cada paso.
+- No implementar movimiento todavía. La política de ataques activos y el descubrimiento del Núcleo requieren aprobación de las propuestas concretas en `docs/PHASE_20_1C.md` antes de codificar reglas que aún no están definidas.
 
 ## Próxima meta: prototipo interactivo
 

@@ -12,7 +12,9 @@ func _check(condition: bool, message: String) -> void:
 
 func _point(view, cell: Vector2i) -> Vector2:
 	var board: Rect2 = view._board_rect()
-	var local_point := board.position + (Vector2(cell) + Vector2.ONE * 0.5) * (board.size.x / 8.0)
+	# Independent expected rotation for the current local player (0).
+	var visual_cell := Vector2i(cell.y, 7 - cell.x)
+	var local_point := board.position + (Vector2(visual_cell) + Vector2.ONE * 0.5) * (board.size.x / 4.0)
 	return view.get_global_transform_with_canvas() * local_point
 
 func _click(view, point: Vector2, pressed: bool = true, button: int = MOUSE_BUTTON_LEFT) -> void:
@@ -65,6 +67,17 @@ func _run() -> void:
 		viewport.size = size
 		var board: Rect2 = view._board_rect()
 		_check(Rect2(Vector2.ZERO, Vector2(size)).encloses(board), "Board fits resized viewport")
+		_check(is_equal_approx(board.size.y, board.size.x * 2.0), "Board has vertical 4:8 aspect")
+		_check(_point(view, Vector2i(4, 1)).y < board.get_center().y, "Enemy is above midpoint")
+		_check(_point(view, Vector2i(3, 1)).y > board.get_center().y, "Local creature is below midpoint")
+		for y in range(4):
+			for x in range(8):
+				var cell := Vector2i(x, y)
+				_check(view._cell_at_viewport_position(_point(view, cell)) == cell, "Every visual cell maps to its logical cell after resize")
+		_check(view._cell_at_viewport_position(board.position) == Vector2i(7, 0), "Top left maps to logical far enemy corner")
+		_check(view._cell_at_viewport_position(board.end - Vector2.ONE * 0.01) == Vector2i(0, 3), "Bottom right maps to logical local corner")
+		_check(view._cell_at_viewport_position(board.position - Vector2(0.01, 0)) == Vector2i(-1, -1), "Left boundary outside rejected")
+		_check(view._cell_at_viewport_position(board.position - Vector2(0, 0.01)) == Vector2i(-1, -1), "Top boundary outside rejected")
 		_click(view, _point(view, Vector2i(3, 1)))
 		_check(view.selected_unit_id == 1, "Selection follows viewport resize")
 		_check(view._cell_at_viewport_position(board.end) == Vector2i(-1, -1), "Bottom/right boundary excluded")
@@ -95,5 +108,5 @@ func _run() -> void:
 	await process_frame
 	viewport.queue_free()
 	if failures == 0:
-		print("PASS: Phase 20.1B selection, input coordinates, HP bars and defeat cleanup")
+		print("PASS: vertical 4x8 selection, input coordinates, HP bars and defeat cleanup")
 	quit(0 if failures == 0 else 1)
