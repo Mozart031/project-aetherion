@@ -11,7 +11,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Reglas acordadas: no modificar sin aprobación
 
 1. **Tiempo real:** ambos jugadores actúan simultáneamente. La simulación puede operar a 20 ticks/segundo; esto no representa turnos.
-2. **Tablero lógico:** 8 columnas × 4 filas = 32 celdas, 16 para cada jugador. Separar esta lógica de la representación tridimensional. Los terrenos pueden tener diferentes longitudes.
+2. **Tablero:** 32 espacios, 16 por jugador. La distribución visual aprobada es vertical, **4 columnas × 8 filas**, con el rival arriba y el jugador local abajo. La simulación conserva por ahora sus coordenadas lógicas **8×4**; planificar una transformación reversible entre ambos espacios en presentación, sin modificar todavía la simulación. Separar esta lógica de la representación tridimensional. Los terrenos pueden tener diferentes longitudes.
 3. **Núcleo oculto:** cada jugador lo coloca en su territorio; el rival debe descubrirlo y destruirlo. Señal de equilibrio hacia mitad de partida, aún por concretar.
 4. **Bloqueo bajo ataque:** no se permite retirar/intercambiar criatura, terreno o construcción mientras sea objetivo de un ataque activo. Se puede jugar en otras zonas.
 5. **Recuperación:** las cartas derrotadas por combate o desastre entran en cooldown; después vuelven a estar disponibles, **no reaparecen automáticamente**.
@@ -67,7 +67,8 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Avance confirmado
 
 - Fase 20.1A completada y publicada en `main`: `5319303d62698a48f1471b69c2b2eb91775ad5b2`. Corrección de la expectativa de HP del jabalí y pruebas de simultaneidad, cooldowns y comandos duplicados; validadas en Godot 4.7.2. Sin cambios en reglas, arquitectura, escenas ni interfaces.
-- Próximo objetivo: Fase 20.1B, selección de criaturas y barras de vida. No iniciarla durante la actualización documental; primero confirmar la sincronización del repositorio.
+- Fase 20.1B aprobada por el propietario tras pruebas visuales en Godot e integrada en `main` desde `codex/phase-20-1b-selection-health` (commit de funcionalidad `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`): selección propia por clic/toque, resaltado, barras de vida, coordenadas adaptadas a la ventana y limpieza tras derrota. La simulación y las reglas de combate se conservan; ver validación en `docs/ROADMAP.md`.
+- Distribución visual 4×8 aprobada; su transformación desde la lógica 8×4 se planifica para la Fase 20.1C. La demo integrada aún dibuja 8×4. Ver `docs/PHASE_20_1C.md`: propuesta técnica solamente; movimiento y reglas pendientes requieren aprobación antes de implementarse.
 
 ## Próxima meta: prototipo interactivo
 

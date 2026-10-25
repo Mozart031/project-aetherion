@@ -9,7 +9,12 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 | Fase 20: base de simulación | Tablero 8×4, simulación a 20 Hz, invocación, esencia, combate, recuperación y final provisional. | Base implementada en `cfe2cdd849028c395eb093bd801e5a1cafc106b7`. Limitaciones en [PHASE_20.md](PHASE_20.md). |
 | Fase 20.1A: regresiones de combate | Corregir HP esperado del jabalí; probar ataques y derrotas simultáneas, cooldowns y comandos duplicados. | Completada y publicada en `main` en `5319303d62698a48f1471b69c2b2eb91775ad5b2`, incluyendo `GEMINI.md`. Pruebas headless aprobadas en Godot 4.7.2. |
 | Sincronización documental | Incorporar la metodología de colaboración y esta hoja de ruta; confirmar Git y conservar el trabajo existente. | Documentación actualizada; base local y remota confirmada en `5319303` y suite aprobada en Godot 4.7.2. El commit y la confirmación de publicación se comunican al entregar; no se incluye código de la Fase 20.1B. |
-| Fase 20.1B: selección y vida | Selección de criaturas y barras de vida, conservando las reglas de combate. | Próximo objetivo; no iniciada. Primero confirmar el repositorio actualizado. |
+| Fase 20.1B: selección y vida | Selección de criaturas propias por clic/toque, resaltado, barras de vida, limpieza tras derrota y coordenadas adaptadas a la ventana. | Aprobada por el propietario tras pruebas visuales en Godot. Integración en `main` de `3b2455b8b5f64eadb3e7a0085cd6b9205b8bfa0f`; pruebas de presentación, combate y arranque repetidas en Godot 4.7.2. Simulación intacta. |
+| Fase 20.1C: movimiento interactivo y adaptación vertical | Planificar la conversión visual 4×8, entrada reversible y movimiento autorizado por simulación. | [Propuesta técnica](PHASE_20_1C.md) preparada. Distribución visual aprobada; transformación aún sin implementar. Movimiento y reglas pendientes de aprobación. |
+
+## Distribución visual aprobada
+
+Isla del Caos utilizará **4 columnas × 8 filas**, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. Se conserva por ahora la simulación lógica 8×4; la Fase 20.1C planifica una transformación reversible en presentación para dibujo, selección, barras y futuros destinos de movimiento. La demo integrada de la Fase 20.1B todavía utiliza dibujo 8×4. Esta decisión no implementa ni autoriza reglas de movimiento.
 
 ## Objetivos posteriores ya registrados
 
@@ -36,6 +41,19 @@ godot --headless --path . --script res://tests/simulation_smoke.gd
 
 La suite conserva las comprobaciones de invocación y esencia e incluye daño simultáneo, derrotas mutuas en ambos órdenes de comandos, límites exactos de cooldown y duplicados sin daño adicional ni ejecución diferida. No representa una validación de interfaz o de Android.
 
+### Validación y controles de la Fase 20.1B
+
+```text
+godot --headless --path . --script res://tests/presentation_smoke.gd
+godot --headless --path . --quit-after 5
+```
+
+- Clic izquierdo o toque primario selecciona la criatura propia del jugador 0; un aro amarillo indica selección. Tocar una celda vacía, un enemigo o fuera del tablero limpia la selección. Soltar, clic derecho y toques secundarios no la cambian.
+- Las barras muestran la fracción de vida de ambos bandos. La selección desaparece al resolverse la derrota. El combate automático de la demo permanece activo y no se generan comandos al seleccionar.
+- El tablero se ajusta al tamaño del viewport y comparte geometría con la entrada; las posiciones de ratón y toque se convierten al espacio local de dibujo.
+- La prueba automatizada cubre selección propia, rechazo de enemigos, liberación de entradas, ratón emulado tras toque, ventanas verticales y horizontales, transformación del nodo, vida tras daño, límites de barras y derrota durante un frame con varios ticks. Comprueba que la selección no altera unidades, jugadores ni comandos.
+- Validación headless en Godot 4.7.2 y aprobación visual comunicada por el propietario. Pruebas de presentación, combate y arranque repetidas para la integración. La prueba táctil en dispositivo Android sigue pendiente. La demo 2D continúa siendo provisional. No se han añadido movimiento, ataques manuales ni reglas nuevas.
+
 ## Decisiones pendientes fuera del incremento actual
 
 - Reglas de movimiento, conflictos de ocupación e interacción con ataques.
@@ -43,4 +61,4 @@ La suite conserva las comprobaciones de invocación y esencia e incluye daño si
 - Descubrimiento del Núcleo y restricciones correspondientes.
 - Identidad de cartas y recuperación cuando existen varias criaturas de la misma especie.
 
-Estos pendientes no autorizan cambios de mecánicas durante la sincronización documental ni la Fase 20.1B.
+Estos pendientes se detallan en la propuesta de la Fase 20.1C y no autorizan cambios de mecánicas ni implementación de movimiento sin aprobación.
