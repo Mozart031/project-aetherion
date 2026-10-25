@@ -8,6 +8,7 @@ var hold_button: Button
 var act_button: Button
 var intent_label: Label
 var flank_ordered := false
+var header_title := "Mesa viva · Fase 22"
 
 func _start_battle() -> void:
 	super._start_battle()
@@ -20,7 +21,7 @@ func _start_battle() -> void:
 	last_message = "Prueba cerdo junto al barro; el rival se acerca al flanco."
 
 func _dock_height() -> float:
-	return 288.0
+	return 288.0 + card_picker_extra_height
 
 func _extend_controls(dock: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
@@ -37,7 +38,7 @@ func _extend_controls(dock: VBoxContainer) -> void:
 	dock.add_child(intent_label)
 
 func _board_rect() -> Rect2:
-	var area := Rect2(Vector2(12, 126), get_viewport_rect().size - Vector2(24, 430))
+	var area := Rect2(Vector2(12, 126), get_viewport_rect().size - Vector2(24, 430 + card_picker_extra_height))
 	var cell := maxf(1, minf(area.size.x / 4, area.size.y / 8))
 	var size := Vector2(4, 8) * cell
 	return Rect2(area.position + (area.size - size) * 0.5, size)
@@ -101,7 +102,7 @@ func _refresh_ui() -> void:
 	super._refresh_ui()
 	if not is_instance_valid(intent_label):
 		return
-	header.text = header.text.replace("Primera batalla", "Mesa viva · Fase 22")
+	header.text = header.text.replace("Primera batalla", header_title)
 	var unit := sim.get_unit(selected_unit_id)
 	var empty := unit.is_empty()
 	hold_button.disabled = empty
