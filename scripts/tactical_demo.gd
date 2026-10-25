@@ -13,6 +13,8 @@ func _ready() -> void:
 	layer.add_child(panel)
 	info = Label.new()
 	info.position = Vector2(16, 8)
+	info.add_theme_font_size_override("font_size", 14)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(info)
 	var buttons := HBoxContainer.new()
@@ -33,6 +35,11 @@ func _ready() -> void:
 
 func _start_demo() -> void:
 	sim.reset()
+	sim.natural_defense.enabled = true
+	sim.place_terrain(Vector2i(3, 1), "mud")
+	sim.place_terrain(Vector2i(3, 2), "mud")
+	sim.place_terrain(Vector2i(4, 1), "mud")
+	sim.place_terrain(Vector2i(4, 2), "mud")
 	accumulator = 0.0
 	selected_unit_id = -1
 	sim.queue_summon(0, "beaver", Vector2i(1, 1))
@@ -71,13 +78,19 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if is_instance_valid(info):
 		var order: Dictionary = sim.get_player_view(LOCAL_PLAYER)["orders"].get(selected_unit_id, {})
-		info.text = "Isla del Caos — combate táctico\nAzul: seleccionar. Celda: destino. Naranja: atacar.\nSelección: %s | Orden: %s | Esencia: %s" % [str(selected_unit_id), str(order.get("status", "sin orden")), str(sim.players[LOCAL_PLAYER]["essence"])]
+		info.size.x = maxf(1, get_viewport_rect().size.x - 32)
+		info.text = "Isla del Caos — combate táctico\nAzul: elegir · Celda: ir · Rival: atacar\nBarro ×2 · Defensa adyacente sin orden\nSelección: %s · %s · Esencia %s" % [str(selected_unit_id), str(order.get("status", "sin orden")), str(sim.players[LOCAL_PLAYER]["essence"])]
 
 func _draw() -> void:
 	super._draw()
 	var order: Dictionary = sim.get_player_view(LOCAL_PLAYER)["orders"].get(selected_unit_id, {})
 	var board := _board_rect()
 	var cell_size := board.size.x / 4.0
+	for cell in sim.get_player_view(LOCAL_PLAYER)["terrain"]:
+		var visual := Vector2(BoardCoordinates.logical_to_visual(cell, LOCAL_PLAYER))
+		# Ground tint stays behind miniatures: a translucent frame inside each tile.
+		var rect := Rect2(board.position + visual * cell_size + Vector2.ONE * 3, Vector2.ONE * (cell_size - 8))
+		draw_rect(rect, Color(0.65, 0.4, 0.18, 0.75), false, cell_size * 0.12)
 	for cell in order.get("path", []):
 		var visual := Vector2(BoardCoordinates.logical_to_visual(cell, LOCAL_PLAYER))
 		draw_circle(board.position + (visual + Vector2.ONE * 0.5) * cell_size, cell_size * 0.06, Color(1, 1, 0.3))

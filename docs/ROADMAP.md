@@ -15,7 +15,7 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 
 ## Distribución visual aprobada
 
-Fase 20.2 autorizada: ver [combate táctico](PHASE_20_2.md). Entrega A implementada en `codex/phase-20-2-tactical-combat`: navegación ortogonal a destinos, persecución, ataques dirigidos y tratamiento de bloqueos/interrupciones. Siete suites y arranque pasan en Godot 4.7.2 antes de comenzar B. Defensa adyacente y barro ×2 aprobados provisionalmente para B; implementación posterior a esa validación. Sin integración en `main` hasta revisión técnica y visual.
+Fase 20.2 implementada en `codex/phase-20-2-tactical-combat`: ver [combate táctico](PHASE_20_2.md). Entrega A registrada en `dcd7c52`: navegación ortogonal a destinos, persecución, ataques dirigidos y bloqueos/interrupciones, con siete suites y arranque aprobados antes de B. Entrega B implementada después: defensa adyacente sin interrumpir órdenes y barro de entrada ×2, con reglas provisionales confirmadas por el propietario y configuración separada. Ocho suites y arranque pasan en Godot 4.7.2. Demo táctica como escena de F5. Sin integración en `main` hasta revisión de TARS y validación visual; prueba táctil Android pendiente. Núcleo rival sigue oculto, sin mecánica de descubrimiento.
 
 Isla del Caos utiliza **4 columnas × 8 filas** en `main`, con el rival en las cuatro filas superiores y el jugador local en las cuatro inferiores: 32 espacios y 16 por jugador. Se conservan las dimensiones lógicas 8×4; el adaptador reversible se aplica al dibujo, selección y posiciones de barras. La demo mantiene jugador local 0; ambas perspectivas del adaptador se prueban sin añadir PvP. El movimiento básico aprobado también está integrado en `main`.
 

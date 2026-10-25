@@ -4,7 +4,7 @@ Rama de revisión: `codex/phase-20-2-tactical-combat`, desde `main` en `80fbdd2`
 
 ## Entrega A
 
-Implementada y validada antes de iniciar B. Siete suites y arranque aprobados en Godot 4.7.2: las cinco suites existentes, `tactical_orders_smoke.gd` y `tactical_presentation_smoke.gd`.
+Implementada y validada antes de iniciar B, registrada en `dcd7c52`. Siete suites y arranque aprobados en Godot 4.7.2: las cinco suites existentes, `tactical_orders_smoke.gd` y `tactical_presentation_smoke.gd`.
 
 - `tactical_orders.gd` administra objetivos explícitos separados de la ejecución en `movement.gd`. Búsqueda BFS ortogonal sobre 32 celdas, desempate fijo derecha/abajo/izquierda/arriba en coordenadas lógicas. Ocupación y reservas bloquean la ruta; no consultar Núcleos ocultos.
 - `queue_destination` mantiene un destino lejano; `queue_target` persigue una criatura enemiga visible hasta una celda ortogonal adyacente y solicita ataques con el alcance, daño y cooldown existentes. Actualmente todas las criaturas son visibles; no se añade niebla ni descubrimiento de Núcleos.
@@ -18,11 +18,39 @@ Implementada y validada antes de iniciar B. Siete suites y arranque aprobados en
 
 F5 abre `scenes/tactical_demo.tscn`. Dos castores azules y dos naranjas, existentes en los datos, respetan el presupuesto inicial de esencia. Seleccionar azul; tocar celda distante para navegar o naranja para perseguir/atacar. Se muestran estado de orden, ruta planificada y objetivo. Botones para detener y reiniciar el escenario. La demo anterior y sus pruebas se conservan; el productor antiguo de ataques automáticos se desactiva solo en la demo táctica.
 
-## Entrega B: reglas provisionales aprobadas
+## Entrega B: reglas provisionales aprobadas e implementadas
 
-Pendiente de implementación después de validar A. El propietario aprobó:
+Implementada después de completar las pruebas de A. El propietario aprobó:
 
 - Defensa únicamente contra enemigos ortogonalmente adyacentes, sin persecución, cuando no existe orden explícita ni desplazamiento en curso. No interrumpir ataques dirigidos, movimientos ni futuras acciones especiales. Menor ID como criterio técnico determinista provisional, sin definir personalidad de especies.
 - Barro duplica la duración de entrada de 6 a 12 ticks, sin modificar daño ni esencia. Reglas configurables y separadas de futuras habilidades ecológicas.
+
+`natural_defense.gd` solo produce solicitudes de ataque, con el mismo validador y cooldown existentes. `natural_defense.enabled` permite activarla/desactivarla: por compatibilidad comienza desactivada en una simulación nueva y se activa en la demo táctica. No actúa sobre criaturas con órdenes explícitas, incluso bloqueadas, ni en tránsito. También respeta órdenes explícitas recibidas ese tick, incluidos pasos técnicos y detener. No cambia de objetivo una orden de ataque dirigida.
+
+`terrain_effects.gd` contiene el mapa público de terreno y el multiplicador configurable `mud_multiplier` (inicial 2); no contiene habilidades ni reglas por especie. `place_terrain` solo admite barro dentro del tablero antes del primer tick. La duración se fija al aceptar cada paso según su destino: entrar en barro cuesta 12 ticks, salir hacia terreno normal 6. Cambiar después un parámetro no modifica pasos comprometidos. Reiniciar elimina el mapa; la demo vuelve a colocarlo. BFS minimiza cantidad de pasos, no tiempo de viaje: no se añade optimización avanzada por coste de terreno.
+
+La demo incorpora cuatro celdas de barro con marco marrón y leyenda. El progreso visual usa la duración real del paso, también sobre barro, y conserva barras de vida. La defensa permite intercambios simultáneos al aproximarse al rival, sin un productor de ataques independiente de las reglas.
+
+## Validación final y límites
+
+Ocho suites aprobadas en Godot 4.7.2: coordenadas, presentación original, combate original, movimiento, presentación de movimiento, órdenes tácticas, presentación táctica y `ecology_smoke.gd`. Arranque de la demo sin errores. A se validó y registró antes de B; las pruebas tácticas se ampliaron para bajas mutuas dirigidas, órdenes duplicadas, conflictos persistentes, final de partida y limpieza de reservas.
+
+Cobertura de B: defensa adyacente simultánea y cooldown exacto, ausencia de persecución, activación configurable, desempate por menor ID independiente del orden de unidades, prioridad de navegación y ataques dirigidos, protección contra órdenes ajenas, duración de barro/normal/configuración, daño sin modificaciones, muerte en tránsito lento, reinicio y comparación de Núcleos ocultos con defensa/terreno/órdenes activos. La presentación prueba barro, duración autoritativa, interpolación lenta, leyenda, ventana estrecha y reinicio del escenario.
+
+Para reproducir:
+
+```text
+godot --headless --path . --script res://tests/board_coordinates_smoke.gd
+godot --headless --path . --script res://tests/presentation_smoke.gd
+godot --headless --path . --script res://tests/simulation_smoke.gd
+godot --headless --path . --script res://tests/movement_smoke.gd
+godot --headless --path . --script res://tests/movement_presentation_smoke.gd
+godot --headless --path . --script res://tests/tactical_orders_smoke.gd
+godot --headless --path . --script res://tests/tactical_presentation_smoke.gd
+godot --headless --path . --script res://tests/ecology_smoke.gd
+godot --headless --path . --quit-after 5
+```
+
+La demo es un escenario de combate, no una partida completa: no incluye victoria por Núcleo oculto, cartas finales ni reinvocación desde interfaz. El barro es una primera interacción de terreno, no personalidad ecológica definitiva. Conflictos permanentes pueden mantener órdenes bloqueadas; se resuelven con otra orden o detener, sin prioridades secretas ni atravesar ocupación. Quedan pendientes revisión técnica de TARS, validación visual del propietario y toque real Android. No se declara validada visualmente esta fase a partir de pruebas headless.
 
 No añadir cartas finales, construcciones completas, IA avanzada, Núcleo descubierto, PvP ni gráficos 3D. El Núcleo rival permanece oculto; descubierto solo mediante fixtures. El comportamiento natural no decide rutas ni reemplaza órdenes explícitas.

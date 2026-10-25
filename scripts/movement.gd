@@ -39,7 +39,7 @@ func advance(units: Array[Dictionary], tick: int) -> Array[Dictionary]:
 				result.append({"type": "move_arrived", "unit_id": id})
 	return result
 
-func resolve(commands: Array, units: Array[Dictionary], tick: int, duration: int, occupied: Dictionary, busy: Dictionary) -> Array[Dictionary]:
+func resolve(commands: Array, units: Array[Dictionary], tick: int, duration: int, occupied: Dictionary, busy: Dictionary, durations: Dictionary = {}) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var live := {}
 	for unit in units:
@@ -69,7 +69,7 @@ func resolve(commands: Array, units: Array[Dictionary], tick: int, duration: int
 	for id in ids:
 		if candidates.has(id) and destination_counts[candidates[id]] == 1:
 			var destination: Vector2i = candidates[id]
-			active[id] = {"from": live[id]["cell"], "to": destination, "start_tick": tick, "end_tick": tick + maxi(1, duration)}
+			active[id] = {"from": live[id]["cell"], "to": destination, "start_tick": tick, "end_tick": tick + maxi(1, int(durations.get(destination, duration)))}
 			reservations[destination] = id
 			result.append({"type": "move_started", "unit_id": id})
 		else:

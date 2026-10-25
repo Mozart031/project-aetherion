@@ -83,7 +83,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 
 ## Próxima meta: prototipo interactivo
 
-La Fase 20.2 está autorizada en rama `codex/phase-20-2-tactical-combat`: Entrega A de destinos lejanos y ataques dirigidos, con pruebas antes de iniciar B. Entrega B provisional aprobada: defensa solo adyacente sin perseguir ni interrumpir órdenes/desplazamientos; menor ID como desempate técnico; barro duplica la entrada (6 a 12 ticks), sin daño ni esencia. Mantener configurables y separados ejecución de movimiento, órdenes explícitas y comportamiento natural. Ver `docs/PHASE_20_2.md`. No integrar sin revisión de TARS y validación visual. No añadir IA avanzada, habilidades, nuevas criaturas ni descubrimiento real del Núcleo.
+La Fase 20.2 está implementada en rama `codex/phase-20-2-tactical-combat`: Entrega A de destinos lejanos y ataques dirigidos (`dcd7c52`), con siete suites y arranque aprobados antes de iniciar B. Entrega B provisional aprobada e implementada: defensa solo adyacente sin perseguir ni interrumpir órdenes/desplazamientos; menor ID como desempate técnico, no personalidad definitiva; barro duplica la entrada (6 a 12 ticks), sin daño ni esencia. Configurables `natural_defense.enabled`, `terrain.mud_multiplier` y duración base; ejecución de movimiento, órdenes explícitas y comportamiento natural separados. Ocho suites y arranque aprobados en Godot 4.7.2. F5 abre la demo táctica con defensa y barro; la demo original se conserva. Ver `docs/PHASE_20_2.md`. No integrar sin revisión de TARS y validación visual. No añadir IA avanzada, habilidades, nuevas criaturas ni descubrimiento real del Núcleo.
 
 1. Selección de criatura por clic/toque y resaltado visible.
 2. Barras de vida e información básica.

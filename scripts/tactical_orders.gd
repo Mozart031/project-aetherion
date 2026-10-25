@@ -112,15 +112,24 @@ func produce(sim) -> Array[Dictionary]:
 				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "destination_reached"})
 				continue
 		if sim.movement.active.has(id):
-			_status(sim, id, "moving")
+			_status(sim, id, "moving", active[id]["path"])
 			continue
 		var path := find_path(unit["cell"], goals, occupied)
 		if path.is_empty():
 			_status(sim, id, "blocked")
 			continue
-		_status(sim, id, "moving", path)
+		active[id]["path"] = path
 		result.append({"type": "move", "player": unit["owner"], "unit_id": id, "cell": path[0]})
 	return result
+
+func observe_movement(sim, movement_events: Array[Dictionary]) -> void:
+	for event in movement_events:
+		var id: int = event["unit_id"]
+		if active.has(id):
+			if event["type"] == "move_rejected":
+				_status(sim, id, "blocked", active[id]["path"])
+			elif event["type"] == "move_started":
+				_status(sim, id, "moving", active[id]["path"])
 
 func cleanup(sim) -> void:
 	for id in active.keys():

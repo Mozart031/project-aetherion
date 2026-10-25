@@ -106,6 +106,56 @@ func _initialize() -> void:
 		_check(first.get_player_view(0) == second.get_player_view(0), "Navigation does not leak hidden core position")
 	sim.reset()
 	_check(sim.orders.active.is_empty(), "Reset clears orders")
+	_test_order_lifecycle()
 	if failures == 0:
 		print("PASS: Delivery A orthogonal routing, chasing, directed combat, blocked/replaced/stopped orders and hidden cores")
 	quit(0 if failures == 0 else 1)
+
+func _test_order_lifecycle() -> void:
+	var sim := _fixture()
+	for repeat in range(3):
+		sim.queue_destination(0, 1, Vector2i(5, 0))
+	sim.step()
+	var accepted := 0
+	for event in sim.events:
+		if event["type"] == "order_accepted":
+			accepted += 1
+	_check(accepted == 1 and sim.orders.active.size() == 1, "Duplicate persistent goals accepted only once")
+	var reference := {}
+	for reverse_order in [false, true]:
+		sim = AetherionSimulation.new()
+		sim.queue_summon(0, "boar", Vector2i(3, 1))
+		sim.queue_summon(1, "boar", Vector2i(4, 2))
+		sim.step()
+		var commands := [[0, 1], [1, 2]]
+		if reverse_order:
+			commands.reverse()
+		for command in commands:
+			sim.queue_destination(command[0], command[1], Vector2i(4, 1))
+		sim.step()
+		_check(sim.orders.active[1]["status"] == "blocked" and sim.orders.active[2]["status"] == "blocked", "Contested first steps expose blocked status for both orders")
+		_check(sim.movement.reservations.is_empty(), "Conflict creates no reservation")
+		if reverse_order:
+			_check(sim.get_player_view(0) == reference, "Contested persistent orders deterministic under input reversal")
+		else:
+			reference = sim.get_player_view(0)
+	sim = AetherionSimulation.new()
+	sim.queue_summon(0, "boar", Vector2i(3, 1))
+	sim.queue_summon(1, "boar", Vector2i(4, 1))
+	sim.step()
+	sim.queue_target(0, 1, 2)
+	sim.queue_target(1, 2, 1)
+	sim.step()
+	_check(sim.get_unit(1)["hp"] == 1 and sim.get_unit(2)["hp"] == 1, "Both directed attacks resolve in the same tick")
+	_ticks(sim, 36)
+	_check(sim.units.is_empty() and sim.orders.active.is_empty(), "Directed mutual death cleans both explicit orders")
+	sim = _fixture()
+	sim.queue_destination(0, 1, Vector2i(5, 0))
+	sim.step()
+	sim.tick_count = AetherionSimulation.MATCH_LIMIT_TICKS - 1
+	sim.step()
+	_check(sim.finished and sim.orders.active.is_empty() and sim.movement.reservations.is_empty(), "Match end clears navigation and reservations")
+	sim.queue_destination(0, 1, Vector2i(0, 0))
+	sim.queue_target(0, 1, 2)
+	sim.queue_stop(0, 1)
+	_check(sim.queued_commands.is_empty(), "No tactical commands accepted after match end")
