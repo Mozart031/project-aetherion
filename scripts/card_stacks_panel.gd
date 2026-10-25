@@ -5,18 +5,22 @@ signal placement_requested(category: String)
 signal drag_preview(point: Vector2)
 signal drag_released(point: Vector2, returned: bool)
 signal cancel_requested
+signal info_requested(category: String, back: bool)
 
 const Catalog = preload("res://scripts/battle_catalog.gd")
 const Gesture = preload("res://scripts/card_stack_gesture.gd")
 const CardScene = preload("res://scenes/card_stack_control.tscn")
+const TacticalSheet = preload("res://scripts/card_tactical_sheet.gd")
 var gesture := Gesture.new()
 var cards: Dictionary = {}
 var locked := false
 var status: Label
 var cancel_button: Button
+var inspected_category := ""
+var sheet: PanelContainer
 
 func _ready() -> void:
-	custom_minimum_size.y = 120
+	custom_minimum_size.y = 132
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -39,6 +43,36 @@ func _ready() -> void:
 	cancel_button.add_theme_font_size_override("font_size", 12)
 	cancel_button.pressed.connect(func(): cancel_requested.emit())
 	commands.add_child(cancel_button)
+	var info_layer := CanvasLayer.new()
+	info_layer.layer = 2
+	add_child(info_layer)
+	sheet = TacticalSheet.new()
+	info_layer.add_child(sheet)
+	sheet.closed.connect(func(): info_requested.emit(inspected_category, false))
+
+func show_reverse(category: String) -> void:
+	if not cards.has(category):
+		return
+	inspected_category = category
+	var card: String = cards[category].data.get("card", "")
+	sheet.show_info(str(cards[category].data.get("title", "Ficha")), Catalog.tactical_info(card))
+	_position_sheet()
+
+func close_info(category: String = "") -> void:
+	if category.is_empty() or inspected_category == category:
+		inspected_category = ""
+		if is_instance_valid(sheet):
+			sheet.hide()
+
+func _position_sheet() -> void:
+	if not is_instance_valid(sheet) or not sheet.visible:
+		return
+	var viewport := get_viewport_rect().size
+	sheet.size = Vector2(minf(420, viewport.x - 24), 236)
+	sheet.position = Vector2((viewport.x - sheet.size.x) * 0.5, maxf(8, get_global_rect().position.y - sheet.size.y - 6))
+
+func _process(_delta: float) -> void:
+	_position_sheet()
 
 func category_at(point: Vector2) -> String:
 	for category in cards:
@@ -104,6 +138,8 @@ func _input(event: InputEvent) -> void:
 		cycle_requested.emit(response["category"])
 	elif response.get("type") == "select":
 		placement_requested.emit(response["category"])
+	elif response.get("type") in ["back", "front"]:
+		info_requested.emit(response["category"], response["type"] == "back")
 	elif response.get("type") == "drop":
 		if response.get("begin", false):
 			placement_requested.emit(response["category"])

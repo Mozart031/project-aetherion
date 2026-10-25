@@ -67,7 +67,10 @@ func _run() -> void:
 	_check(view.board.sim.queued_commands.size() == queued_before + 1, "Emulated mouse cannot duplicate touch placement")
 	view.board._process(0.05)
 	_check(view.board.sim.get_unit(2).get("kind") == "pig" and view.board.sim.players[0]["essence"] == 2 and view.placement.draft.is_empty(), "Tick accepts deployment and updates UI")
-	_check(view.stacks.top("creature") == "pig" and view.panel.cards["creature"].data["copies_text"] == "Desplegada", "Playing preserves top card while separate copy inventory changes")
+	_check(view.stacks.top("creature") == "boar", "Accepted creature deployment advances its stack automatically")
+	for index in range(3):
+		_cycle(view, viewport, "creature")
+	_check(view.stacks.top("creature") == "pig" and view.panel.cards["creature"].data["copies_text"] == "Desplegada", "Used authentic species remains equipped and active when cycled back")
 	var active_essence: int = view.board.sim.players[0]["essence"]
 	_tap(viewport, card_rect.get_center())
 	_check(view.placement.draft.is_empty() and view.placement.message == "species_active" and view.board.sim.players[0]["essence"] == active_essence, "Active species remains in its stack but cannot start a second deployment")
@@ -84,7 +87,7 @@ func _run() -> void:
 	_touch(viewport, destination, false)
 	_check(view.placement.busy(), "Releasing over a valid cell confirms direct drag")
 	view.board._process(0.05)
-	_check(view.board.sim.get_unit(3).get("kind") == "boar" and view.stacks.top("creature") == "boar" and view.board.selected_unit_id == 2, "Direct deployment preserves top card and previous tactical selection")
+	_check(view.board.sim.get_unit(3).get("kind") == "boar" and view.stacks.top("creature") == "horse" and view.board.selected_unit_id == 2, "Direct deployment advances only after acceptance and preserves tactical selection")
 	while view.board.sim.tick_count < 120:
 		view.board._process(0.05)
 	var terrain: Rect2 = view.panel.cards["terrain"].get_global_rect()
@@ -124,10 +127,9 @@ func _run() -> void:
 	mouse.position = motion.position
 	viewport.push_input(mouse, true)
 	view.board._process(0.05)
-	_check(view.board.sim.cards.terrain_owners.get(Vector2i(0, 0)) == 0 and view.stacks.top("terrain") == "cornfield", "PC drag deploys one terrain without rotating")
-	_cycle(view, viewport, "terrain")
+	_check(view.board.sim.cards.terrain_owners.get(Vector2i(0, 0)) == 0 and view.stacks.top("terrain") == "mud", "PC drag advances the terrain stack only after accepted deployment")
 	_check(view.stacks.top("terrain") == "mud" and view.panel.cards["terrain"].data["recovery_text"] == "Falta esencia", "Unavailable types stay navigable and distinguish essence from recovery")
-	for index in range(3):
+	for index in range(2):
 		_cycle(view, viewport, "creature")
 	_check(view.stacks.top("creature") == "pig", "Active authentic species is still reachable through circular navigation")
 	view.board.sim.get_unit(2)["hp"] = 0 # Defeat fixture for presentation; normal cleanup starts recovery.

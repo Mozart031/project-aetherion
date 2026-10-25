@@ -2,9 +2,9 @@
 
 **Corrección obligatoria para revisión:** una auténtica por especie y jugador; activa o recuperándose impide una segunda invocación. Las reglas anteriores de tres copias quedan derogadas. Aplicada únicamente en la rama de Fase 23; `main` permanece en `597757d`. Informe de cambios y pruebas en [PHASE_23_UNIQUE_SPECIES_REVIEW.md](PHASE_23_UNIQUE_SPECIES_REVIEW.md).
 
-**Estado actual:** ambos bloques implementados en `codex/phase-23-circular-card-stacks`, desde main integrado y publicado `597757d025b21b83860aec014a016502c28d87f4`. **25 suites y cuatro arranques aprobados en Godot 4.7.2. No integrada en main; pendiente de revisión de TARS y validación visual del director creativo.** Sin estadísticas definitivas ni conversión 3D.
+**Estado actual:** ambos bloques y ajustes de interacción implementados en `codex/phase-23-circular-card-stacks`, desde main integrado y publicado `597757d025b21b83860aec014a016502c28d87f4`. **27 suites, cuatro arranques e importación aprobados en Godot 4.7.2. No integrada en main.** TARS verificó la corrección de auténtica única y el director creativo probó la demo; esta entrega requiere nueva revisión y autorización antes de integrar. Sin estadísticas definitivas ni conversión 3D. Informe actual: [PHASE_23_INTERACTION_REVIEW.md](PHASE_23_INTERACTION_REVIEW.md).
 
-Alcance autorizado por el director creativo: cuatro pilas independientes, gestos abajo/arriba, especie como entrada y una única auténtica por especie/jugador, conservar carta superior tras jugar y colocación provisional por arrastre o selección/toque. La implementación conserva la simulación, economía y combate aprobados.
+Alcance autorizado por el director creativo: cuatro pilas independientes, gestos abajo/arriba, especie como entrada y una única auténtica por especie/jugador, colocación por arrastre o selección/toque, avance automático solo tras aceptación correlacionada y reverso informativo izquierda/derecha. **La decisión posterior a la prueba jugable sustituye únicamente la antigua obligación de conservar la carta superior tras jugar.** La simulación, economía y combate aprobados se conservan.
 
 ## Resultado previsto y reglas que se conservan
 
@@ -24,12 +24,12 @@ La Fase 23 incorpora equipamiento por partida y navegación circular. Hay cuatro
 
 | Capa | Responsabilidad implementada | No debe hacer |
 | --- | --- | --- |
-| Catálogo | Identidad `card_id` (IDs actuales), categoría, coste, etiqueta y modo de objetivo; registro de efectos existentes. | Almacenar cursor, gestos o recuperación de una instancia. |
+| Catálogo | Identidad, categoría, coste, etiqueta, objetivo y metadatos tácticos informativos de efectos implementados. | Almacenar cursor, gestos o recuperación; usar textos para resolver reglas. |
 | Equipamiento de partida | Listas ordenadas de IDs por categoría, validadas y congeladas al iniciar la partida. | Inventar una colección, progresión o límites de mazo no aprobados. |
 | `CardStackModel` | Un cursor independiente por categoría y acceso al tipo superior; avance circular determinista. | Tratar copias como entradas, gastar esencia o decidir daño. |
 | `BattleCards` / simulación | Un registro auténtico por especie/jugador, disponibilidad, validación pura de colocación y ejecución definitiva en tick. | Mover el cursor al morir/recuperarse o confiar en un resaltado del cliente. |
-| Controlador de colocación | Borrador, objetivo visual, cancelación y envío único de intención; espera de aceptación/rechazo. | Modificar economía/posiciones o detener el combate. |
-| `CardStackControl` / panel | Gestos, animación del recorrido, coste, disponibilidad y tiempo hasta recuperación. | Duplicar reglas o enviar órdenes tácticas con el mismo toque. |
+| Controlador de colocación | Borrador, objetivo visual, cancelación y envío único; consume respuesta de jugador/request_id/carta y entrega aceptación una vez al coordinador para avanzar la pila. | Modificar economía/posiciones o detener el combate. |
+| `CardStackControl` / panel / ficha | Gestos, recorrido, frente compacto y reverso táctico desplazable, coste/estado/recuperación. | Duplicar reglas o enviar órdenes tácticas al consultar. |
 
 Contrato orientativo:
 
@@ -47,7 +47,7 @@ La secuencia circular no se filtra por disponibilidad: una carta agotada sigue v
 
 ## Interacción táctil provisional implementada
 
-Cada pila tiene una zona `Control` propia. Umbral vertical configurable, inicialmente 48 unidades de interfaz, corregido por escala de viewport/DPI; predominio vertical inicial 1,3× respecto al desplazamiento horizontal. Son valores de UX para probar en Android, no reglas de combate. Movimiento corto u horizontal no rota ni despliega. Un gesto puede emitir **una sola intención**, con animación de previsualización antes de comprometerla.
+Cada pila tiene una zona `Control` propia. Umbral vertical configurable de 48 unidades lógicas de viewport; horizontal de 32, adaptado a cartas estrechas; predominio de eje de 1,3× y tolerancia de toque de 12. El escalado de entrada lo realiza Godot; sensibilidad/DPI requieren Android real. El primer eje reconocido queda fijado hasta soltar; un arrastre ambiguo no selecciona ni despliega. Un gesto produce una sola interacción: recorrer, colocar o consultar.
 
 ### Deslizar hacia abajo
 
@@ -64,9 +64,15 @@ Cada pila tiene una zona `Control` propia. Umbral vertical configurable, inicial
 4. Confirmar envía un único comando con `request_id`; pasar a estado «enviando» hasta el tick de respuesta, sin nuevas confirmaciones duplicadas. Se revalidan esencia, copia y destino en ese tick. Un resaltado anterior no garantiza aceptación: el combate sigue cambiando.
 5. Aceptación actualiza inventario/efectos desde la simulación. Rechazo no gasta esencia ni consume copia y permite corregir el borrador con explicación. Si ya no existe su objetivo (p. ej. criatura a curar), volver a pedir un objetivo válido.
 
-**Regla confirmada por el director creativo:** después de colocar una carta, esa misma carta permanece arriba. Conservar el índice después de éxito o cancelación; la pila solo cambia mediante el gesto hacia abajo. No introducir rotación automática al jugar, morir o recuperarse una copia, ni robo aleatorio.
+**Decisión vigente posterior a la prueba jugable:** al aceptar la simulación una colocación, avanzar `(index + 1) % size` solo en su categoría. La carta usada pasa al final del recorrido circular, sin retirarla ni reordenar el equipamiento. `consume` entrega el borrador aceptado una sola vez y lo elimina; exige coincidencia de jugador, `request_id` y carta. El coordinador avanza el cursor al recibir esa entrega. Eventos repetidos, respuestas ajenas/antiguas y replays no vuelven a avanzar. También se procesa una aceptación en el último tick antes de limpiar por fin de partida. Iniciar, enviar, previsualizar, cancelar o rechazar no avanza; tampoco muerte/recuperación. Longitud uno permanece en cero, actualizando su estado. Abajo sigue recorriendo manualmente; no hay robo aleatorio.
 
 Mientras hay borrador, se mantiene la selección táctica anterior si su criatura sigue viva, sin emitir nuevas órdenes de tablero por los toques de colocación. Las órdenes ya aceptadas continúan. Otra pila puede rotarse independientemente; rotar la pila de origen cancela primero su borrador, y después realiza la rotación solicitada. Deslizar arriba en otra pila reemplaza el borrador anterior sin gasto. Durante la breve espera de respuesta se bloquean nuevas confirmaciones para evitar doble despliegue.
+
+### Reverso informativo
+
+Izquierda sobre la carta abre su reverso y una ficha ampliada encima de las pilas; derecha sobre esa carta o «Cerrar» vuelve al frente. La ficha muestra función, acción/instinto, ventaja y desventaja, con texto de 14 unidades y desplazamiento vertical. Fondo opaco para lectura; ocupa provisionalmente parte inferior del tablero, sin pausar el combate. Se conserva acceso a los cuatro controles. Solo una ficha ampliada a la vez; cambiar carta, iniciar colocación, atrás, pérdida de foco o reinicio la cierra. Abrirla descarta únicamente un borrador local sin confirmar; durante una confirmación pendiente los controles siguen bloqueados.
+
+El frente muestra nombre, coste, estado y rasgo breve. `Catalog.TACTICS` contiene descripciones de las mecánicas existentes; ninguna regla lee esos textos. Para información todavía no definida, `tactical_info` devuelve «Pendiente de definición» y deja vacío el rasgo breve. No se inventan estadísticas ni debilidades. La ficha no consulta ubicaciones secretas, no gasta, no selecciona objetivos ni emite órdenes. Sus toques se consumen para evitar que lleguen al tablero; la selección y órdenes anteriores continúan.
 
 ## Separación de entrada y autoridad
 
@@ -96,6 +102,7 @@ El equipamiento se pasa a la simulación como configuración de partida: rechaza
 | `scripts/card_stack_control.gd`, `scenes/card_stack_control.tscn` (nuevos) | Control reutilizable por pila, captura de gestos y presentación compacta. |
 | `scripts/card_placement_controller.gd` (nuevo) | Borrador, cancelación, objetivo, consulta y confirmación única. |
 | `scripts/card_stacks_panel.gd`, `scripts/card_stack_gesture.gd`, `scripts/card_placement_preview.gd` | Captura GUI, reconocimiento de gesto independiente y dibujo de destinos sin reglas de combate. |
+| `scripts/card_tactical_sheet.gd` | Ficha informativa con cuatro secciones, cierre y scroll; sin referencia a simulación. |
 | `scripts/battle_cards.gd`, `scripts/simulation.gd` | Consulta pura compartida, configuración equipada y respuesta correlacionada; conservar inventario/efectos actuales. |
 | `scripts/battle_depth_demo.gd`, panel/escena de demo de Fase 23 | Componer cuatro controles de pila con el tablero/controles existentes. Preferir componentes y hooks a seguir duplicando demos por herencia. Conservar escenas previas hasta aprobación. |
 | `tests/card_stacks_smoke.gd`, `tests/card_placement_smoke.gd`, `tests/card_stacks_presentation_smoke.gd`, `tests/card_stacks_scenario_smoke.gd` (previstos) | Modelo, transacciones, gestos y batalla integrada. Nombres provisionales. |
@@ -109,6 +116,8 @@ No se prevén cambios en movimiento, instintos, ataques, terreno, daño ni descu
 
 **B — Gestos y batalla completa.** Cuatro vistas superiores con inventario separado, captura exclusiva, recorrido abajo, arrastre/armado arriba, previsualización, confirmación/cancelación, filtro de ratón emulado, cambio de foco y feedback de disponibilidad. Batalla integrada y ventanas verticales verificadas; 24 suites aprobadas. Android físico y validación visual de TARS/director creativo pendientes; publicación únicamente en rama de revisión.
 
+**Ajuste posterior a la validación jugable del director creativo:** rotación automática tras aceptación una vez por solicitud, reverso táctico y separación horizontal/vertical. Veintisiete suites y cuatro arranques aprobados; economía, auténtica única y combate conservados. Pendientes nueva revisión de TARS y validación de esta interacción; publicación solo en la rama de 23.
+
 Fase 22 se integró primero en `597757d`, preservando el historial y pasando nuevamente sus 19 suites y ambos arranques. Después se creó la rama de Fase 23 desde main sincronizado. El bloque A (equipamiento, modelo y transacciones) quedó validado con 21 suites antes de conectar el bloque B. No integrar Fase 23 sin su propia revisión técnica y validación visual.
 
 ## Criterios de aceptación cubiertos
@@ -116,10 +125,11 @@ Fase 22 se integró primero en `597757d`, preservando el historial y pasando nue
 | Área | Casos obligatorios |
 | --- | --- |
 | Circularidad | Secuencia de cuatro especies reales; N avances vuelven al inicio; independencia de cuatro cursores; listas vacías/de un elemento; tipos indisponibles permanecen navegables. |
-| Carta superior tras jugar | Despliegue aceptado conserva exactamente el tipo superior y los cuatro cursores; rechazo/cancelación tampoco rotan. Solo un gesto hacia abajo de esa pila cambia su índice. |
+| Carta superior tras jugar | Aceptación correlacionada avanza solo su categoría una vez; duplicados/solicitudes ajenas no repiten. Sin avance por envío, previsualización, rechazo o cancelación; longitud uno conserva el tipo y su disponibilidad correcta. |
 | Tipos y copias | Una especie tiene una entrada y una auténtica por jugador; actividad/derrota/recuperación no rota la pila; un tipo diferente siempre tiene identidad/etiqueta distinta. Configuración futura de catálogo no exige cambios del control. |
 | Equipamiento | Solo IDs equipados/categoría válida; orden estable; rechazo de configuración inválida sin partida parcialmente inicializada. Casos futuros con dos construcciones/trucos mediante fixtures, sin añadir cartas de jugabilidad. |
-| Gestos | Umbrales, arrastre horizontal, inversión de dirección, un avance por gesto largo, varios dedos, ratón emulado y captura hasta liberar; ausencia de órdenes tácticas accidentales. |
+| Gestos | Izquierda reverso/derecha frente; arriba coloca/abajo recorre. Umbrales, diagonales ambiguas, eje fijado, varios dedos, ratón emulado y captura hasta liberar; sin órdenes tácticas accidentales. |
+| Información | Nueve fichas basadas en reglas existentes; fallback pendiente. Sin coste, pausa, selección u órdenes; texto desplazable a 360×800, estado activo/recuperando actualizado al leer. |
 | Cancelación | Antes/durante previsualización, volver a pila, atrás, perder foco, reinicio y cambio de carta: cero gasto/consumo y cursores preservados salvo rotación explícita independiente. |
 | Validación | Territorio, ocupación, reservas, restricciones de terreno/refugio/ataque activo, curación solo a propia herida; consultas no mutan y no revelan Núcleos. |
 | Economía y recuperación | Preparar/navegar/rechazar no paga; confirmar válido paga una vez; dos confirmaciones no duplican; rechazar una segunda invocación estando activa o recuperándose sin gasto; límite exacto de recuperación; falta de esencia distinta de falta de copia. |
@@ -128,16 +138,16 @@ Fase 22 se integró primero en `597757d`, preservando el historial y pasando nue
 | Integración | Recorrer cerdo/jabalí/caballo/gólem, cancelar, desplegar y combatir, perder una criatura, rechazar reemplazo durante recuperación y reinvocarla después, jugar terreno/construcción/truco. Economía real, sin manipular vida/esencia para aprobar el escenario. |
 | Regresiones | Repetir las 19 suites de cierre de 22, arranque, determinismo de entradas aceptadas a 20 Hz y privacidad. Gestos solo en cliente; no variar resultados para acompañar animación. |
 
-Pruebas implementadas y ejecutadas en Godot `4.7.2.stable.official.ed1daf0bf`: **25/25 aprobadas**, las 24 suites adaptadas y una nueva suite exhaustiva de auténticas. Eventos táctiles sintéticos recorren la GUI real de un SubViewport; esto no equivale a validación en Android físico.
+Pruebas implementadas y ejecutadas en Godot `4.7.2.stable.official.ed1daf0bf`: **27/27 aprobadas**, incluidas las 25 de la corrección de auténticas y dos nuevas para rotación e información. Eventos táctiles sintéticos recorren la GUI real de un SubViewport; esto no equivale a validación en Android físico.
 
 ## Decisiones confirmadas y detalles pendientes
 
-1. **Confirmado:** cuatro pilas independientes; abajo recorre circularmente, arriba inicia colocación; una especie distinta es una entrada y tiene una única auténtica por jugador. Después de colocar, la misma carta permanece arriba; solo el gesto hacia abajo cambia la pila.
+1. **Confirmado:** cuatro pilas independientes; abajo recorre, arriba inicia colocación; izquierda muestra reverso, derecha frente. Una especie es una entrada y tiene una auténtica por jugador. Aceptar una colocación avanza solo su pila una vez; cancelar/rechazar no. Sustituye la antigua conservación de carta superior.
 2. **Autorizado e implementado provisionalmente:** arrastrar y soltar sobre tablero válido confirma; un deslizamiento corto hacia arriba o un toque en la carta arma para un toque posterior en destino. Ajustable después de pruebas táctiles; cancelar un borrador no gasta.
 3. Equipamiento implementado en la demo: todos los tipos actuales, una entrada por tipo con un único registro auténtico por especie de criatura. Sin cuotas, selección de colección o multiplicación de entradas por copia; límites de mazo y más cartas se acuerdan aparte.
 4. Limitación conservada: una sola construcción y un solo truco actuales; no añadir efectos nuevos para simular pilas mayores sin aprobación.
 
-Las reglas centrales de pilas, gestos y conservación de carta superior están confirmadas. No convertir los detalles pendientes en reglas definitivas por implementación implícita. El objetivo es variedad de tipos y controles táctiles rápidos conservando la autoridad del jugador y el combate existente. No implementar estadísticas definitivas de vida ni convertir el proyecto a 3D en esta preparación.
+Las reglas centrales de pilas, gestos y avance tras aceptación están confirmadas. No convertir los detalles pendientes en reglas definitivas por implementación implícita. El objetivo es variedad de tipos y controles táctiles rápidos conservando la autoridad del jugador y el combate existente. No implementar estadísticas definitivas de vida ni convertir a 3D.
 
 ## Demo jugable y decisiones técnicas aplicadas
 
@@ -145,7 +155,8 @@ Abrir **`scenes/battle_stacks_demo.tscn` y ejecutar F6**. F5 conserva `battle_de
 
 - Abajo en una pila: siguiente tipo, con animación breve; no saltar cartas agotadas. Arriba: iniciar colocación y arrastrar al tablero; soltar válido confirma. Toque corto en carta, o deslizamiento arriba sin llegar al tablero, permite tocar después el destino. Ratón admite los mismos arrastres/clics.
 - Regresar a la pila tras arrastrar, «Cancelar», Escape, atrás o pérdida de foco cancelan solo la previsualización. No se puede deshacer localmente una orden ya confirmada/enviada; su respuesta llega en el tick. Reiniciar limpia borrador, cursores, captura y solicitudes junto con la simulación.
-- Mismo tipo arriba tras éxito/rechazo/cancelación/derrota/recuperación. Tipo agotado sigue navegable; esencia insuficiente, especie desplegada y tiempo de recuperación se muestran por separado. Una construcción o truco de longitud uno conserva su tipo al recorrer.
+- Aceptar avanza a la siguiente carta, una vez por solicitud correlacionada. Rechazo/cancelación/derrota/recuperación no avanzan. La usada sigue navegable con estado correcto; activa o recuperando impide otra auténtica. Construcción/truco de longitud uno mantienen su tipo incluso tras aceptación.
+- Izquierda abre la ficha táctica de la carta actual; derecha o «Cerrar» vuelve. Consultar no pausa ni ordena. Arriba desde el reverso cierra la ficha e inicia colocación; abajo cierra y recorre. El texto largo se puede desplazar dentro de la ficha, sin cambiar cartas ni dar órdenes.
 - Las consultas de colocación son puras y las ejecuta la simulación. Un resaltado puede caducar por combate/ocupación antes del tick: el comando revalida sin pago parcial. IDs monotónicos por jugador y memoria acotada a la última respuesta evitan doble coste/despliegue; respuestas antiguas no cierran un borrador posterior. Los comandos antiguos sin ID siguen funcionando en las demos previas.
 - Composición, no otra cadena de herencia: `battle_stacks_demo.gd` combina la vista de 22 con `card_stacks_panel.gd`, controles de carta y `card_placement_preview.gd`. Hooks opcionales de selector/reinicio y señal de tick en la vista compartida conservan el comportamiento anterior por defecto. No se pausa ni se altera combate/movimiento durante navegación.
 - Equipamiento por defecto con los nueve tipos existentes; se valida y copia antes del primer tick, se conserva al reiniciar y no se edita durante la batalla. Sin editor de colección ni nuevas cartas. El cursor y el borrador no contienen copias asignadas anticipadamente.
@@ -157,17 +168,19 @@ Además de adaptar las suites anteriores, `authentic_species_smoke.gd` comprueba
 
 | Suite nueva | Evidencia |
 | --- | --- |
-| `card_stacks_smoke.gd` | Cuatro tipos de criatura, ciclo completo e independencia; vacío/una carta; fixtures de futuros tipos sin nuevas mecánicas; configuración inválida atómica, aislamiento y bloqueo de equipamiento durante partida; jugar no rota. |
+| `card_stacks_smoke.gd` | Cuatro tipos, ciclo e independencia; vacío/una carta; catálogos futuros sin nuevas mecánicas; configuración atómica y aislamiento. Simulación sola no modifica cursores de presentación: el coordinador consume la aceptación. |
 | `card_placement_smoke.gd` | Previsualizar/cancelar sin mutación, territorio/ocupación/reservas/curación, pago exacto, confirmación duplicada, cambios de celda/esencia antes del tick, replay/solicitudes antiguas, respuestas antiguas, disponibilidad y Núcleo oculto. |
-| `card_stack_gestures_smoke.gd` | Umbral/axis, abajo una vez, arriba/selección, horizontal sin acción, retorno/cancelación, inversión de dirección, liberación agrupada y captura exclusiva. |
+| `card_stack_gestures_smoke.gd` | Umbral/eje, abajo una vez, arriba/selección, izquierda/reverso y derecha/frente, diagonales ambiguas, eje fijado, retorno/cancelación, inversión y captura exclusiva. |
 | `card_stacks_presentation_smoke.gd` | Entrada por GUI real de SubViewport: circularidad, arriba corto, toque/destino y arrastre directo con toque y ratón; emulación, secundarios, cancelación/foco, disponibilidad sin esencia, selección táctica preservada, reinicio y viewport 360×800. |
-| `card_stacks_scenario_smoke.gd` | Nueve cartas reales en cuatro pilas; pagos, daño de combate, curación, demolición, derrota auténtica, rechazo durante recuperación y reinvocación posterior, countdown visible, escenario despejado y cursor estable. Sin escribir vida, posición, esencia ni recuperación para aprobar el escenario. |
+| `card_stacks_scenario_smoke.gd` | Nueve cartas reales; economía, daño, curación, demolición, derrota, rechazo en recuperación y reinvocación posterior. Avance solo por aceptación en su categoría, equipamiento estable. Sin escribir vida, posición, esencia ni recuperación. |
+| `card_rotation_smoke.gd` | Aceptación una vez, duplicados/replay, resultados ajenos o de otra carta, rechazo local/en tick, cancelación, independencia, longitud uno con disponibilidad y aceptación en tick final. |
+| `card_info_smoke.gd` | Metadatos verificados/fallback, GUI izquierda/derecha, aislamiento de gestos verticales y tablero, sin cambios de simulación/órdenes/selección; activo/recuperando, batalla continúa, texto y scroll en vertical. |
 
-Las 25 suites pasan y arrancan sin errores las cuatro demos en Godot 4.7.2; importación del editor y UID generados. Capturas de la nueva demo a 480×900 y 360×800 revisadas por el implementador, con pilas y previsualización separadas del tablero. No se afirma aprobación visual del director creativo ni ejecución en dispositivo Android.
+Las 27 suites pasan y las cuatro demos arrancan sin errores de scripts en Godot 4.7.2; importación y UID generados. Capturas de frente y reverso a 480×900 y 360×800 revisadas por el implementador, incluyendo scroll de desventajas. El director creativo probó la entrega previa y solicitó estos ajustes; no se afirma su aprobación de esta nueva interacción ni ejecución en Android físico.
 
 ## Límites y revisión pendiente
 
-UI 2D y arte provisionales. Umbral 48, predominio vertical 1,3 y tolerancia de toque 12 en unidades lógicas de viewport; se benefician del escalado de entrada de Godot, pero sensibilidad/DPI, tamaño de dedo y rendimiento requieren Android real. Demos previas y F5 conservados. No se añade PvP, red, historial de solicitudes persistente, nuevas especies, estadísticas definitivas o 3D.
+UI 2D y arte provisionales. Umbrales vertical 48/horizontal 32, predominio de eje 1,3 y tolerancia de toque 12 en unidades lógicas; sensibilidad/DPI, tamaño de dedo y rendimiento requieren Android real. La ficha opaca cubre temporalmente parte del tablero inferior: cerrarla devuelve esa visibilidad, sin pausar. No hay APK/AAB ni configuración de exportación versionada; validar primero desde el editor. Demos previas y F5 conservados. Sin PvP, red, historial persistente, nuevas especies, estadísticas definitivas o 3D.
 
 La construcción y el truco tienen una carta real cada uno; las criaturas tienen una auténtica por especie y jugador, sin parámetro para ampliar copias y el terreno/construcción sus restricciones anteriores. Catálogo y equipamiento admiten nuevos tipos sin reescribir las pilas; un efecto nuevo requerirá su regla/controlador y aprobación propia.
 

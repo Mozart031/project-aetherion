@@ -56,7 +56,7 @@ func _initialize() -> void:
 	var cursor_before := model.snapshot()
 	sim.queue_play_card(0, "horse", Vector2i(1, 1))
 	sim.step()
-	_check(sim.get_unit(1).get("kind") == "horse" and cursor_before == model.snapshot(), "Playing a card cannot rotate any cursor")
+	_check(sim.get_unit(1).get("kind") == "horse" and cursor_before == model.snapshot(), "Simulation alone never changes presentation cursors; the controller consumes its accepted result")
 	sim.reset()
 	_check(not sim.loadouts[0].contains("boar") and sim.loadouts[0].contains("horse"), "Restart preserves the equipped match configuration")
 	if failures == 0:

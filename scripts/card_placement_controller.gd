@@ -50,21 +50,24 @@ func confirm(sim, cell: Vector2i, target_id: int = -1) -> bool:
 	sim.queue_play_card(draft["player"], draft["card"], cell, target_id, draft["request_id"])
 	return true
 
-func consume(view: Dictionary) -> void:
+## Returns one matched acceptance for presentation; clearing the draft deduplicates it.
+func consume(view: Dictionary) -> Dictionary:
 	if draft.is_empty():
-		return
+		return {}
+	if busy():
+		for event in view["events"]:
+			if event["type"] != "card_result" or event["player"] != draft["player"] or event["request_id"] != draft["request_id"] or event.get("card") != draft["card"]:
+				continue
+			if event["accepted"]:
+				var played := draft.duplicate(true)
+				draft.clear()
+				message = "accepted"
+				return played
+			draft["state"] = "preview"
+			message = event["reason"]
+			break
+	# Even an acceptance in the final tick must be consumed before game-over cleanup.
 	if view["finished"]:
 		draft.clear()
 		message = "match_finished"
-		return
-	if not busy():
-		return
-	for event in view["events"]:
-		if event["type"] == "card_result" and event["player"] == draft["player"] and event["request_id"] == draft["request_id"]:
-			if event["accepted"]:
-				draft.clear()
-				message = "accepted"
-			else:
-				draft["state"] = "preview"
-				message = event["reason"]
-			return
+	return {}

@@ -45,6 +45,11 @@ func _run() -> void:
 	# No writes to HP, essence, positions, copy state or timers.
 	while view.board.sim.tick_count < 1260:
 		var sim: AetherionSimulation = view.board.sim
+		if loss_tick > 0 and sim.tick_count == loss_tick:
+			for turn in range(view.stacks.count("creature")):
+				if view.stacks.top("creature") == "pig":
+					break
+				view._cycle("creature")
 		if demolished and not opened_route:
 			opened_route = true
 			sim.queue_destination(0, golem, Vector2i(5, 2))
@@ -77,8 +82,15 @@ func _run() -> void:
 			1080: _play(view, "creature", "boar", Vector2i(1, 0))
 			1200: _play(view, "creature", "pig", Vector2i(2, 0))
 		var cursor_before: Dictionary = view.stacks.snapshot()
+		var pending: Dictionary = view.placement.draft.duplicate(true)
 		view.board._process(0.05)
-		_check(cursor_before == view.stacks.snapshot(), "Accepted cards, deaths and recovery never rotate stacks")
+		var expected: Dictionary = cursor_before["cursors"].duplicate()
+		if pending.get("state") == "sending":
+			for event in sim.events:
+				if event["type"] == "card_result" and event["player"] == 0 and event["request_id"] == pending["request_id"] and event["accepted"]:
+					expected[pending["category"]] = (int(expected[pending["category"]]) + 1) % view.stacks.count(pending["category"])
+					break
+		_check(expected == view.stacks.snapshot()["cursors"] and cursor_before["cards"] == view.stacks.snapshot()["cards"], "Only accepted matching requests rotate their category; equipment, death and recovery do not")
 		var authentic := {}
 		for unit in sim.units:
 			var key := "%s:%s" % [unit["owner"], unit["kind"]]
@@ -110,7 +122,7 @@ func _run() -> void:
 	_check(not view.board.sim.get_player_view(0)["players"][1].has("core_cell") and view.board.sim.players[1]["core_hp"] == 12, "Card preview and the full encounter preserve hidden-core protection")
 	view.queue_free()
 	if failures == 0:
-		print("PASS: all nine real cards, four circular stacks, real economy, combat, contextual actions, independent recovery and replay without cursor rotation")
+		print("PASS: nine real cards, independent accepted-request rotation, real economy, combat, authentic recovery and stable equipment")
 	quit(0 if failures == 0 else 1)
 
 func sim_enemy_free(sim: AetherionSimulation) -> bool:

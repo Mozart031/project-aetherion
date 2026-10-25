@@ -2,11 +2,13 @@
 
 Rama exclusiva de revisión: `codex/phase-23-circular-card-stacks`, sobre entrega anterior `080fd3f`. **Sin integrar en main**, que permanece publicado en `597757d025b21b83860aec014a016502c28d87f4`. Esta corrección aplica la instrucción posterior del director creativo y sustituye la antigua regla de tres copias por especie.
 
+**Actualización posterior:** TARS verificó esta corrección en `14193bb`; el director creativo probó la demo y solicitó rotación al aceptar y reverso informativo. La antigua conservación de carta superior queda sustituida; la unicidad y recuperación de este informe se mantienen. Estado/pruebas actuales en [PHASE_23_INTERACTION_REVIEW.md](PHASE_23_INTERACTION_REVIEW.md).
+
 ## Regla aplicada y comportamiento observable
 
 | Estado de la especie, por jugador | Invocar | Carta en pila | Esencia |
 | --- | --- | --- | --- |
-| Disponible | Sí, tras confirmar destino válido y tener esencia. | Permanece en el recorrido y arriba si era la superior. | Coste existente al aceptar. |
+| Disponible | Sí, tras confirmar destino válido y tener esencia. | Permanece en el recorrido; la aceptación avanza solo su pila. | Coste existente al aceptar. |
 | Desplegada | No, aunque existan esencia y destinos libres. | Visible como Desplegada; se puede recorrer a otro tipo. | Rechazo sin gasto. |
 | Recuperando tras derrota | No hasta completar el plazo existente. | Visible como Recuperando y con cuenta atrás. | Rechazo sin gasto. |
 | Recuperación terminada | Se devuelve la disponibilidad, sin reaparición automática. | Misma posición y tipo superior. | Nueva invocación requiere pagar y confirmar. |
@@ -16,7 +18,7 @@ Cada jugador puede tener su propia auténtica de la misma especie. Las especies 
 ## Archivos y decisiones
 
 - `scripts/battle_cards.gd`: se elimina `copies_per_species`; constante `AUTHENTIC_UNITS_PER_SPECIES = 1`. Se conserva un registro interno `copy_id = 0` por compatibilidad con identidad/recuperación existentes. `free_copy`, usado por la invocación directa y por cartas, niega cualquier segundo despliegue. `availability` distingue `species_active` y `species_recovering` antes de cobrar.
-- `scripts/battle_stacks_demo.gd`: etiquetas Disponible/Desplegada/Recuperando, motivos claros y desaparición del aviso de recuperación al terminar. Cuatro pilas y gestos intactos; jugar, derrotar y recuperar no rotan.
+- `scripts/battle_stacks_demo.gd`: etiquetas Disponible/Desplegada/Recuperando, motivos claros y desaparición del aviso al terminar recuperación. Derrotar y recuperar no rotan; la decisión posterior permite avanzar una vez al aceptar una jugada.
 - `scripts/battle_demo.gd`: eliminado el segundo cerdo inicial del mismo rival; queda uno, con su coste anterior. Se mantienen intentos de valla en tick 121 y jabalí en 301, pagados y validados por la misma simulación. No se añade sustituto ni compensación de balance.
 - `scripts/tactical_demo.gd`: eliminado el segundo castor de cada jugador de la demo técnica anterior. Todas las demos pasan por la misma restricción; no existe una ruta especial de refuerzos que la omita.
 - Pruebas anteriores: retiradas expectativas de dos auténticas propias simultáneas o una sustituta durante recuperación. Los casos de competencia ecológica usan auténticas de jugadores distintos; los controles independientes usan especies distintas. Se adaptan IDs/cantidades a la retirada de duplicados.
@@ -46,7 +48,7 @@ godot --headless --path . res://scenes/tactical_demo.tscn --quit-after 5
 
 ## Validación visual y límites
 
-Abrir `scenes/battle_stacks_demo.tscn` en Godot 4.7.2 y ejecutar **F6**. Desplegar cerdo: su carta queda arriba como Desplegada y no admite otro; recorrer otras especies no lo elimina de la pila. Tras derrota, muestra Recuperando hasta terminar el contador; después queda Disponible, sin recrearse hasta confirmar otra invocación. Probar lo mismo con rival y con gestos de arrastre/toque.
+Abrir `scenes/battle_stacks_demo.tscn` en Godot 4.7.2 y ejecutar **F6**. Desplegar cerdo: la aceptación avanza a jabalí; recorrer tres veces devuelve el cerdo como Desplegada, bloqueado para reinvocar. Tras derrota, muestra Recuperando hasta terminar el contador; después queda Disponible sin recrearse automáticamente. Ni morir ni recuperar avanza el cursor. Probar lo mismo con rival y gestos de arrastre/toque.
 
 El implementador revisa capturas verticales de disponibilidad, actividad y recuperación con combate real. Estas comprobaciones no son aprobación visual del director creativo ni prueba Android físico. Conservadas las limitaciones de Núcleo oculto, resultado por HP del Núcleo, balance provisional y reloj ante bloqueos largos. **Pendientes revisión de TARS y validación visual; no fusionar esta rama.**
 

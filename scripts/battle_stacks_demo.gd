@@ -22,7 +22,7 @@ func _ready() -> void:
 	get_tree().quit_on_go_back = false
 	board = BattleScene.instantiate()
 	board.card_picker = panel
-	board.card_picker_extra_height = 28.0
+	board.card_picker_extra_height = 40.0
 	board.header_title = "Pilas circulares · Fase 23"
 	board.simulation_stepped.connect(_on_step)
 	board.battle_restarted.connect(_on_restart)
@@ -31,6 +31,7 @@ func _ready() -> void:
 	panel.drag_preview.connect(_hover)
 	panel.drag_released.connect(_drop)
 	panel.cancel_requested.connect(_cancel)
+	panel.info_requested.connect(_inspect)
 	add_child(board)
 	add_child(overlay)
 	# Existing action controls abandon unconfirmed card placement, not player orders.
@@ -50,6 +51,7 @@ func _on_restart() -> void:
 	placement.reset()
 	stacks.configure(board.sim.loadouts[0].snapshot())
 	panel.gesture.cancel()
+	panel.close_info()
 	preserved_selection = -1
 	hover_point = Vector2(-1000, -1000)
 	_preview_key = ""
@@ -57,7 +59,11 @@ func _on_restart() -> void:
 	_refresh()
 
 func _on_step() -> void:
-	placement.consume(board.sim.get_player_view(0))
+	var played: Dictionary = placement.consume(board.sim.get_player_view(0))
+	if not played.is_empty():
+		stacks.cycle(played["category"])
+		panel.close_info(played["category"])
+		_preview_key = ""
 	if preserved_selection != -1 and not board.sim.get_unit(preserved_selection).is_empty():
 		board.selected_unit_id = preserved_selection
 	if placement.draft.is_empty():
@@ -71,12 +77,14 @@ func _cycle(category: String) -> void:
 		placement.cancel()
 		preserved_selection = -1
 	stacks.cycle(category)
+	panel.close_info(category)
 	_preview_key = ""
 	_refresh()
 
 func _begin(category: String) -> void:
 	if placement.busy():
 		return
+	panel.close_info()
 	if placement.draft.is_empty():
 		preserved_selection = board.selected_unit_id
 	board.act_mode = false
@@ -89,6 +97,7 @@ func _begin(category: String) -> void:
 
 func _cancel() -> void:
 	panel.gesture.cancel()
+	panel.close_info()
 	placement.cancel()
 	if placement.draft.is_empty():
 		preserved_selection = -1
@@ -98,6 +107,16 @@ func _cancel() -> void:
 
 func _abandon_for_tactic() -> void:
 	_cancel()
+
+func _inspect(category: String, back: bool) -> void:
+	if placement.busy():
+		return
+	if back:
+		_cancel() # Only a local unconfirmed preview; no unit order is changed.
+		panel.show_reverse(category)
+	else:
+		panel.close_info(category)
+	_refresh()
 
 func _hover(point: Vector2) -> void:
 	hover_point = point
@@ -167,7 +186,7 @@ func _reason_text() -> String:
 		if species["recovering"] > 0:
 			return "Esta especie está recuperándose."
 		return ""
-	return {"unavailable": "Falta esencia o disponibilidad.", "occupied": "Espacio ocupado o reservado.", "own_territory_required": "Coloca en tus filas inferiores.", "invalid_target": "Elige una criatura propia herida.", "not_equipped": "Carta no equipada.", "refuge_occupied": "Primero sal del refugio.", "terrain_locked_or_same": "Terreno igual o bajo ataque.", "accepted": "Carta desplegada; sigue arriba.", "match_finished": "Partida terminada."}.get(placement.message, "")
+	return {"unavailable": "Falta esencia o disponibilidad.", "occupied": "Espacio ocupado o reservado.", "own_territory_required": "Coloca en tus filas inferiores.", "invalid_target": "Elige una criatura propia herida.", "not_equipped": "Carta no equipada.", "refuge_occupied": "Primero sal del refugio.", "terrain_locked_or_same": "Terreno igual o bajo ataque.", "accepted": "Carta jugada correctamente.", "match_finished": "Partida terminada."}.get(placement.message, "")
 
 func _refresh() -> void:
 	if not is_instance_valid(panel.status):
@@ -190,14 +209,14 @@ func _refresh() -> void:
 			recovery = "%s rec. %.1fs" % [state["recovering"], maxf(0, float(state["ready_tick"] - board.sim.tick_count) / 20)]
 		elif state["available"] > 0 and not state["valid"]:
 			recovery = "Falta esencia"
-		panel.cards[category].show_card({"card": id, "category_label": labels[index], "title": Catalog.CARDS.get(id, {"label": "Vacía"})["label"], "ready": state["valid"], "count": stacks.count(category), "cost_text": "%sE · %s/%s" % [state["cost"], stacks.position_of(category) + 1 if stacks.count(category) else 0, stacks.count(category)], "copies_text": copies, "recovery_text": recovery, "selected": placement.draft.get("category") == category})
+		panel.cards[category].show_card({"card": id, "category_label": labels[index], "title": Catalog.CARDS.get(id, {"label": "Vacía"})["label"], "ready": state["valid"], "count": stacks.count(category), "cost_text": "%sE · %s/%s" % [state["cost"], stacks.position_of(category) + 1 if stacks.count(category) else 0, stacks.count(category)], "copies_text": copies, "recovery_text": recovery, "selected": placement.draft.get("category") == category or panel.inspected_category == category, "back": panel.inspected_category == category, "brief": Catalog.tactical_info(id)["brief"]})
 	panel.status.text = _reason_text()
 	if placement.busy():
 		panel.status.text = "Confirmando colocación..."
 	elif not placement.draft.is_empty() and panel.status.text.is_empty():
 		panel.status.text = "Arrastra al tablero o toca un destino."
 	elif placement.draft.is_empty() and panel.status.text.is_empty():
-		panel.status.text = "↓ Recorrer · ↑ o toque: colocar"
+		panel.status.text = "↓ Recorrer · ↑ Colocar · ← Ficha"
 	_refresh_preview()
 
 func _target_at(cell: Vector2i) -> int:

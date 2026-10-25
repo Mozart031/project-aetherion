@@ -2,6 +2,7 @@ extends RefCounted
 
 ## One captured pointer, one gesture decision. Coordinates are viewport logical units.
 var threshold := 48.0
+var horizontal_threshold := 32.0
 var axis_ratio := 1.3
 var tap_slop := 12.0
 var pointer := -2
@@ -47,6 +48,8 @@ func move(id: int, point: Vector2) -> Dictionary:
 		direction = "up" if delta.y < 0 else "down"
 		if direction == "up":
 			return {"type": "begin", "category": category}
+	elif direction.is_empty() and absf(delta.x) >= horizontal_threshold and absf(delta.x) >= absf(delta.y) * axis_ratio:
+		direction = "left" if delta.x < 0 else "right"
 	return {}
 
 func release(id: int, point: Vector2) -> Dictionary:
@@ -62,6 +65,10 @@ func release(id: int, point: Vector2) -> Dictionary:
 		result["cancel"] = left_origin and origin_rect.has_point(point)
 	elif direction == "down" and delta.y >= threshold and delta.y >= absf(delta.x) * axis_ratio:
 		result["type"] = "cycle"
+	elif direction == "left" and delta.x <= -horizontal_threshold and -delta.x >= absf(delta.y) * axis_ratio:
+		result["type"] = "back"
+	elif direction == "right" and delta.x >= horizontal_threshold and delta.x >= absf(delta.y) * axis_ratio:
+		result["type"] = "front"
 	elif direction.is_empty() and max_distance <= tap_slop:
 		result["type"] = "select"
 	cancel()
