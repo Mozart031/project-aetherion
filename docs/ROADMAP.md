@@ -9,7 +9,7 @@ Documento de continuidad y avance. Las reglas aprobadas se mantienen en [GEMINI.
 | Fase 20: base de simulación | Tablero 8×4, simulación a 20 Hz, invocación, esencia, combate, recuperación y final provisional. | Base implementada en `cfe2cdd849028c395eb093bd801e5a1cafc106b7`. Limitaciones en [PHASE_20.md](PHASE_20.md). |
 | Fase 20.1A: regresiones de combate | Corregir HP esperado del jabalí; probar ataques y derrotas simultáneas, cooldowns y comandos duplicados. | Completada y publicada en `main` en `5319303d62698a48f1471b69c2b2eb91775ad5b2`, incluyendo `GEMINI.md`. Pruebas headless aprobadas en Godot 4.7.2. |
 | Sincronización documental | Incorporar la metodología de colaboración y esta hoja de ruta; confirmar Git y conservar el trabajo existente. | Documentación actualizada; base local y remota confirmada en `5319303` y suite aprobada en Godot 4.7.2. El commit y la confirmación de publicación se comunican al entregar; no se incluye código de la Fase 20.1B. |
-| Fase 20.1B: selección y vida | Selección de criaturas y barras de vida, conservando las reglas de combate. | Próximo objetivo; no iniciada. Primero confirmar el repositorio actualizado. |
+| Fase 20.1B: selección y vida | Selección de criaturas propias por clic/toque, resaltado, barras de vida, limpieza tras derrota y coordenadas adaptadas a la ventana. | Implementada en `codex/phase-20-1b-selection-health`, pendiente de revisión e integración. Pruebas de presentación y combate aprobadas en Godot 4.7.2. Simulación intacta. |
 
 ## Objetivos posteriores ya registrados
 
@@ -35,6 +35,19 @@ godot --headless --path . --script res://tests/simulation_smoke.gd
 ```
 
 La suite conserva las comprobaciones de invocación y esencia e incluye daño simultáneo, derrotas mutuas en ambos órdenes de comandos, límites exactos de cooldown y duplicados sin daño adicional ni ejecución diferida. No representa una validación de interfaz o de Android.
+
+### Validación y controles de la Fase 20.1B
+
+```text
+godot --headless --path . --script res://tests/presentation_smoke.gd
+godot --headless --path . --quit-after 5
+```
+
+- Clic izquierdo o toque primario selecciona la criatura propia del jugador 0; un aro amarillo indica selección. Tocar una celda vacía, un enemigo o fuera del tablero limpia la selección. Soltar, clic derecho y toques secundarios no la cambian.
+- Las barras muestran la fracción de vida de ambos bandos. La selección desaparece al resolverse la derrota. El combate automático de la demo permanece activo y no se generan comandos al seleccionar.
+- El tablero se ajusta al tamaño del viewport y comparte geometría con la entrada; las posiciones de ratón y toque se convierten al espacio local de dibujo.
+- La prueba automatizada cubre selección propia, rechazo de enemigos, liberación de entradas, ratón emulado tras toque, ventanas verticales y horizontales, transformación del nodo, vida tras daño, límites de barras y derrota durante un frame con varios ticks. Comprueba que la selección no altera unidades, jugadores ni comandos.
+- Validación headless en Godot 4.7.2; queda pendiente revisión visual y prueba táctil en dispositivo Android. La demo 2D continúa siendo provisional. No se han añadido movimiento, ataques manuales ni reglas nuevas.
 
 ## Decisiones pendientes fuera del incremento actual
 

@@ -67,7 +67,7 @@ El juego debe sentirse como una **mesa física 3D con terrenos volumétricos y m
 ## Avance confirmado
 
 - Fase 20.1A completada y publicada en `main`: `5319303d62698a48f1471b69c2b2eb91775ad5b2`. Corrección de la expectativa de HP del jabalí y pruebas de simultaneidad, cooldowns y comandos duplicados; validadas en Godot 4.7.2. Sin cambios en reglas, arquitectura, escenas ni interfaces.
-- Próximo objetivo: Fase 20.1B, selección de criaturas y barras de vida. No iniciarla durante la actualización documental; primero confirmar la sincronización del repositorio.
+- Fase 20.1B implementada en la rama `codex/phase-20-1b-selection-health`, pendiente de revisión e integración: selección propia por clic/toque, resaltado, barras de vida, coordenadas adaptadas a la ventana y limpieza tras derrota. La simulación y las reglas de combate se conservan; ver validación y límites en `docs/ROADMAP.md`.
 
 ## Próxima meta: prototipo interactivo
 
