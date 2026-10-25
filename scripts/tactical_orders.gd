@@ -59,9 +59,10 @@ func ingest(commands: Array, sim) -> void:
 				var cell: Vector2i = goal["cell"]
 				valid = cell.x >= 0 and cell.x < 8 and cell.y >= 0 and cell.y < 4
 			"attack_target":
-				var target: Dictionary = sim.get_unit(int(goal["target_id"]))
+				var target: Dictionary = sim.get_target(int(goal["target_id"]))
 				valid = not target.is_empty() and target["owner"] != unit["owner"] and int(sim.CARD_STATS[unit["kind"]]["atk"]) > 0
 			"stop":
+				sim.actions.interrupt(id, sim)
 				active.erase(id)
 				sim.events.append({"type": "order_stopped", "unit_id": id})
 				continue
@@ -72,6 +73,8 @@ func ingest(commands: Array, sim) -> void:
 			continue
 		if active.has(id) and active[id]["goal"] == goal:
 			continue
+		sim.actions.interrupt(id, sim)
+		sim.actions.ensure_exit(id, sim)
 		active[id] = {"goal": goal, "status": "pending", "path": []}
 		sim.events.append({"type": "order_accepted", "unit_id": id})
 
@@ -85,16 +88,18 @@ func produce(sim) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var ids := active.keys()
 	ids.sort()
-	var occupied: Dictionary = sim.movement.occupied_cells(sim.units)
+	var occupied: Dictionary = sim.occupied_cells()
 	for id in ids:
 		var unit: Dictionary = sim.get_unit(id)
 		if unit.is_empty():
 			active.erase(id)
 			continue
+		if sim.actions.active.has(id):
+			continue
 		var goal: Dictionary = active[id]["goal"]
 		var goals: Array = []
 		if goal["kind"] == "attack_target":
-			var target: Dictionary = sim.get_unit(int(goal["target_id"]))
+			var target: Dictionary = sim.get_target(int(goal["target_id"]))
 			if target.is_empty():
 				active.erase(id)
 				sim.events.append({"type": "order_completed", "unit_id": id, "reason": "target_defeated"})
@@ -135,7 +140,7 @@ func cleanup(sim) -> void:
 	for id in active.keys():
 		if sim.get_unit(id).is_empty():
 			active.erase(id)
-		elif active[id]["goal"]["kind"] == "attack_target" and sim.get_unit(int(active[id]["goal"]["target_id"])).is_empty():
+		elif active[id]["goal"]["kind"] == "attack_target" and sim.get_target(int(active[id]["goal"]["target_id"])).is_empty():
 			active.erase(id)
 			sim.events.append({"type": "order_completed", "unit_id": id, "reason": "target_defeated"})
 

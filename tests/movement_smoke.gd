@@ -154,7 +154,7 @@ func _test_damage_and_death() -> void:
 		sim.step()
 		if lethal:
 			_check(sim.get_unit(1).is_empty(), "Lethal arrival-tick hit defeats before arrival")
-			_check(sim.players[0]["recovering"].get("boar") == 248, "Combat recovery still starts on defeat")
+			_check(sim.players[0]["recovering"].get(1, {}).get("ready_tick") == 248, "Individual combat recovery still starts on defeat")
 		else:
 			_check(sim.get_unit(1)["hp"] == 2 and sim.get_unit(1)["cell"] == Vector2i(3, 0), "Arrival cannot evade an accepted hit")
 		_check(sim.get_motion(1).is_empty() and sim.movement.reservations.is_empty(), "Death or arrival releases reservations")

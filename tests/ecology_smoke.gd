@@ -35,7 +35,7 @@ func _test_defense() -> void:
 	_ticks(sim, 35)
 	_check(sim.units.size() == 2 and sim.get_unit(1)["hp"] == 1, "Defense respects cooldown before exact expiry")
 	sim.step()
-	_check(sim.units.is_empty() and sim.players[0]["recovering"].has("boar") and sim.players[1]["recovering"].has("boar"), "Defensive mutual defeat and recovery at cooldown expiry")
+	_check(sim.units.is_empty() and sim.players[0]["recovering"].has(1) and sim.players[1]["recovering"].has(2), "Defensive mutual defeat and individual recovery at cooldown expiry")
 	sim = _pair(Vector2i(1, 1), Vector2i(6, 1))
 	_ticks(sim, 20)
 	_check(sim.get_unit(1)["cell"] == Vector2i(1, 1) and sim.get_unit(2)["cell"] == Vector2i(6, 1), "No autonomous pursuit or navigation")

@@ -22,8 +22,12 @@ func _process(delta: float) -> void:
 			sim.queue_attack(int(sim.units[1]["id"]), int(sim.units[0]["id"]))
 		sim.step()
 		_clear_defeated_selection()
+		_after_sim_step()
 		accumulator -= AetherionSimulation.TICK_SECONDS
 	queue_redraw()
+
+func _after_sim_step() -> void:
+	pass
 
 func _clear_defeated_selection() -> void:
 	if selected_unit_id != -1 and sim.get_unit(selected_unit_id).is_empty():

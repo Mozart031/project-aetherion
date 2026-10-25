@@ -52,11 +52,13 @@ func _test_simultaneous_attacks() -> void:
 		sim.step()
 		assert(sim.tick_count == 38)
 		assert(sim.units.is_empty(), "Both boars must die in the same tick")
-		assert(sim.events.size() == 2, "Both defeats must produce events")
+		var defeat_count := 0
 		for event in sim.events:
-			assert(event["type"] == "defeated")
+			if event["type"] == "defeated":
+				defeat_count += 1
+		assert(defeat_count == 2, "Both defeats must produce events")
 		for player in sim.players:
-			assert(player["recovering"]["boar"] == 278, "Both recovery timers start on defeat")
+			assert(player["recovering"].values()[0]["ready_tick"] == 278, "Both individual recovery timers start on defeat")
 	print("PASS: simultaneous damage and mutual defeats in both command orders")
 
 

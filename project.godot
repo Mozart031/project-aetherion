@@ -15,8 +15,14 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Project Aetherion — Isla del Caos"
-run/main_scene="res://scenes/tactical_demo.tscn"
+run/main_scene="res://scenes/battle_demo.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=480
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
 
 [rendering]
 
