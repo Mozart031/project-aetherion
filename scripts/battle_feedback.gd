@@ -23,11 +23,11 @@ func consume(view: Dictionary) -> void:
 	effects = effects.filter(func(effect): return int(effect["expires"]) > tick)
 	for event in view["events"]:
 		var type: String = event["type"]
-		if type not in ["attack_accepted", "damaged", "building_damaged", "defeated", "building_defeated", "special_started", "special_completed", "special_cancelled", "card_played", "card_recovered"]:
+		if type not in ["attack_accepted", "damaged", "building_damaged", "defeated", "building_defeated", "special_started", "special_completed", "special_cancelled", "card_played", "card_recovered", "board_joined"]:
 			continue
 		var effect: Dictionary = event.duplicate(true)
 		effect["tick"] = tick
-		effect["expires"] = tick + (14 if type in ["defeated", "building_defeated", "card_recovered"] else 8)
+		effect["expires"] = tick + (14 if type in ["defeated", "building_defeated", "card_recovered", "board_joined"] else 8)
 		if type == "defeated":
 			effect["actor"] = actors.get(event["unit_id"], {}).duplicate(true)
 		effects.append(effect)

@@ -8,6 +8,7 @@ var terrain_owners: Dictionary = {}
 var buildings: Array[Dictionary] = []
 var next_building_id := 1000000
 var _last_requests := [{}, {}]
+var next_building_id_by_player := [1000000, 2000000]
 
 func reset(kinds: Array) -> void:
 	copies = [{}, {}]
@@ -20,6 +21,7 @@ func reset(kinds: Array) -> void:
 	buildings.clear()
 	next_building_id = 1000000
 	_last_requests = [{}, {}]
+	next_building_id_by_player = [1000000, 2000000]
 
 func free_copy(player: int, kind: String, tick: int) -> int:
 	for copy in copies[player].get(kind, []):
@@ -83,7 +85,7 @@ func _reject(sim, command: Dictionary, reason: String) -> void:
 	sim.events.append({"type": "card_rejected", "player": command["player"], "card": command["card"], "reason": reason})
 	_answer(sim, command, false, reason)
 
-func availability(player: int, kind: String, sim) -> Dictionary:
+func availability(player: int, kind: String, sim, at_tick: int = -1) -> Dictionary:
 	var result := {"valid": false, "reason": "invalid_card", "available": 0, "active": 0, "recovering": 0, "ready_tick": 0, "cost": 0}
 	if player not in [0, 1] or not Catalog.CARDS.has(kind):
 		return result
@@ -93,6 +95,8 @@ func availability(player: int, kind: String, sim) -> Dictionary:
 		result["reason"] = "match_finished"
 	elif not sim.loadouts[player].contains(kind):
 		result["reason"] = "not_equipped"
+	elif sim.is_preparation_phase(at_tick) and Catalog.CARDS[kind]["category"] not in ["terrain", "construction"]:
+		result["reason"] = "preparation_phase"
 	elif Catalog.CARDS[kind]["category"] == "creature" and result["active"] > 0:
 		result["reason"] = "species_active"
 	elif Catalog.CARDS[kind]["category"] == "creature" and result["recovering"] > 0:
@@ -109,7 +113,7 @@ func validate_play(command: Dictionary, sim, commands: Array, at_tick: int = -1)
 	var player: int = command["player"]
 	var kind: String = command["card"]
 	var cell: Vector2i = command["cell"]
-	var result := availability(player, kind, sim)
+	var result := availability(player, kind, sim, at_tick)
 	result["cell"] = cell
 	result["target_id"] = int(command.get("target_id", -1))
 	if not result["valid"]:
@@ -191,10 +195,15 @@ func play(command: Dictionary, sim, commands: Array) -> void:
 		sim.territory.register_footprint([cell], kind, player)
 		sim.players[player]["essence"] -= int(data["cost"])
 	elif category == "construction":
-		buildings.append({"id": next_building_id, "kind": kind, "owner": player, "cell": cell, "hp": 4, "max_hp": 4})
-		next_building_id += 1
+		var building_id: int = int(next_building_id_by_player[player])
+		next_building_id_by_player[player] = building_id + 1
+		buildings.append({"id": building_id, "kind": kind, "owner": player, "cell": cell, "hp": 4, "max_hp": 4})
+		next_building_id = int(next_building_id_by_player[0])
 		sim.players[player]["essence"] -= int(data["cost"])
-	sim.events.append({"type": "card_played", "player": player, "card": kind, "cell": cell})
+	var played_event := {"type": "card_played", "player": player, "card": kind, "cell": cell}
+	if sim.is_preparation_phase():
+		played_event["preparation"] = true
+	sim.events.append(played_event)
 	_answer(sim, command, true)
 
 func apply_damage(damage: Dictionary, sim) -> void:

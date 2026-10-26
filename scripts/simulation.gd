@@ -20,6 +20,7 @@ const MAX_ESSENCE := 8
 const ESSENCE_REGEN_TICKS := 60
 const CORE_MAX_HP := 12
 const MATCH_LIMIT_TICKS := 12000
+const PREPARATION_TICKS := 600
 ## Observer contract: unknown events/fields are never public by default.
 const PUBLIC_EVENTS := {
 	"summoned": ["unit_id", "kind", "owner"],
@@ -34,7 +35,7 @@ const PUBLIC_EVENTS := {
 	"move_started": ["unit_id"], "move_arrived": ["unit_id"],
 	"special_started": ["unit_id", "kind", "cell", "end_tick"],
 	"special_completed": ["unit_id", "kind", "cell", "amount"],
-	"special_cancelled": ["unit_id"], "match_end": ["winner"]
+	"special_cancelled": ["unit_id"], "board_joined": ["tick"], "match_end": ["winner"]
 }
 const PRIVATE_EVENTS := ["card_result", "card_rejected", "card_recovered", "order_accepted", "order_rejected", "order_status", "order_stopped", "order_completed", "natural_state", "ecology_changed", "ecology_rejected", "special_rejected", "move_rejected"]
 const CARD_STATS := {
@@ -66,6 +67,9 @@ var cards := BattleCards.new()
 var natural := NaturalIntents.new()
 var loadouts := [MatchLoadout.new(), MatchLoadout.new()]
 var territory := TerritoryControl.new()
+var preparation_enabled := false
+var preparation_ticks := PREPARATION_TICKS
+var match_phase := "combat"
 
 func _init() -> void:
 	reset()
@@ -84,6 +88,7 @@ func reset() -> void:
 	actions.reset()
 	natural.reset()
 	territory.reset()
+	match_phase = "preparation" if preparation_enabled else "combat"
 	players = [
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "core_known_to": [true, false], "recovering": {}},
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "core_known_to": [false, true], "recovering": {}}
@@ -100,6 +105,24 @@ func place_core(player: int, cell: Vector2i) -> bool:
 		return false
 	players[player]["core_cell"] = cell
 	return true
+
+func enable_preparation(enabled: bool = true, duration_ticks: int = PREPARATION_TICKS) -> bool:
+	if tick_count != 0:
+		return false
+	preparation_enabled = enabled
+	preparation_ticks = maxi(1, duration_ticks)
+	match_phase = "preparation" if enabled else "combat"
+	return true
+
+func is_preparation_phase(at_tick: int = -1) -> bool:
+	if not preparation_enabled:
+		return false
+	if at_tick < 0:
+		return match_phase == "preparation"
+	return at_tick <= preparation_ticks
+
+func preparation_remaining_ticks() -> int:
+	return maxi(0, preparation_ticks - tick_count) if is_preparation_phase() else 0
 
 func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
 	if not finished:
@@ -254,7 +277,7 @@ func _queue_order(player: int, unit_id: int, goal: Dictionary) -> void:
 		queued_commands.append({"type": "order", "player": player, "unit_id": unit_id, "goal": goal})
 
 func can_move(player: int, unit_id: int, destination: Vector2i) -> bool:
-	return not finished and not actions.active.has(unit_id) and not get_unit(unit_id).get("sheltered", false) and movement.can_move(get_unit(unit_id), player, destination, occupied_cells(), movement.active)
+	return not finished and not is_preparation_phase() and not actions.active.has(unit_id) and not get_unit(unit_id).get("sheltered", false) and movement.can_move(get_unit(unit_id), player, destination, occupied_cells(), movement.active)
 
 func get_motion(unit_id: int) -> Dictionary:
 	return movement.active.get(unit_id, {}).duplicate(true)
@@ -270,6 +293,8 @@ func _event_for(event: Dictionary, observer: int) -> Dictionary:
 	var type: String = event.get("type", "")
 	if type in PRIVATE_EVENTS:
 		return event.duplicate(true) if event.get("player", -1) == observer else {}
+	if type == "card_played" and event.get("preparation", false) and event.get("player", -1) != observer:
+		return {}
 	if PUBLIC_EVENTS.has(type):
 		var result := _project_fields(event, PUBLIC_EVENTS[type])
 		result["type"] = type
@@ -297,9 +322,15 @@ func get_player_view(observer: int) -> Dictionary:
 	var visible_buildings: Array[Dictionary] = []
 	for building in cards.buildings:
 		visible_buildings.append(_project_fields(building, ["id", "kind", "owner", "cell", "hp", "max_hp"]))
+	var hide_enemy_prep := is_preparation_phase()
+	if hide_enemy_prep:
+		visible_buildings = visible_buildings.filter(func(b): return int(b["owner"]) == observer)
+	var visible_terrain := {}
 	var visible_terrain_owners := {}
 	for cell in terrain.cells:
-		visible_terrain_owners[cell] = cards.terrain_owners.get(cell, -1)
+		if not hide_enemy_prep or owns_cell(observer, cell):
+			visible_terrain[cell] = terrain.cells[cell]
+			visible_terrain_owners[cell] = cards.terrain_owners.get(cell, -1)
 	var card_states := {}
 	for kind in BattleCards.Catalog.CARDS:
 		card_states[kind] = cards.state(observer, kind, self)
@@ -308,7 +339,7 @@ func get_player_view(observer: int) -> Dictionary:
 		var projected := _event_for(event, observer)
 		if not projected.is_empty():
 			observed_events.append(projected)
-	return {"tick": tick_count, "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "terrain_owners": visible_terrain_owners, "territory": territory.view_for(observer), "events": observed_events, "finished": finished, "winner": winner}
+	return {"tick": tick_count, "phase": match_phase, "preparation_remaining_ticks": preparation_remaining_ticks(), "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": visible_terrain.duplicate(true), "terrain_owners": visible_terrain_owners, "territory": territory.view_for(observer, hide_enemy_prep), "events": observed_events, "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	if not finished:
@@ -339,6 +370,14 @@ func step() -> void:
 	# First accept summons, then evaluate attacks against the same pre-damage state.
 	var commands := queued_commands.duplicate(true)
 	queued_commands.clear()
+	if is_preparation_phase():
+		for command in commands:
+			if command["type"] == "play_card":
+				cards.play(command, self, commands)
+		if tick_count >= preparation_ticks:
+			match_phase = "combat"
+			events.append({"type": "board_joined", "tick": tick_count})
+		return
 	for command in commands:
 		if command["type"] == "summon":
 			_apply_summon(command)
@@ -442,7 +481,7 @@ func _apply_summon(command: Dictionary) -> void:
 	var player: int = int(command["player"])
 	var kind: String = str(command["kind"])
 	var cell: Vector2i = command["cell"]
-	if player not in [0, 1] or not CARD_STATS.has(kind) or not owns_cell(player, cell):
+	if is_preparation_phase() or player not in [0, 1] or not CARD_STATS.has(kind) or not owns_cell(player, cell):
 		return
 	var stats: Dictionary = CARD_STATS[kind]
 	var copy_id := cards.free_copy(player, kind, tick_count)
