@@ -215,6 +215,7 @@ func apply_damage(damage: Dictionary, sim) -> void:
 			sim.events.append({"type": "building_damaged", "unit_id": building["id"], "amount": amount, "cell": building["cell"]})
 		if building["hp"] <= 0:
 			sim.players[int(building["owner"])]["recovering"][building["id"]] = {"kind": building["kind"], "ready_tick": sim.tick_count + maxi(1, construction_recovery_ticks)}
+			sim.territory.clear_defender_coverage(int(building["id"]))
 			sim.events.append({"type": "building_defeated", "unit_id": building["id"], "cell": building["cell"]})
 		else:
 			survivors.append(building)

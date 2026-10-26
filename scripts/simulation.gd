@@ -35,7 +35,7 @@ const PUBLIC_EVENTS := {
 	"move_started": ["unit_id"], "move_arrived": ["unit_id"],
 	"special_started": ["unit_id", "kind", "cell", "end_tick"],
 	"special_completed": ["unit_id", "kind", "cell", "amount"],
-	"special_cancelled": ["unit_id"], "board_joined": ["tick"], "match_end": ["winner"]
+	"special_cancelled": ["unit_id"], "board_joined": ["tick"], "section_conquered": ["unit_id", "player", "previous_owner", "cell", "footprint_id"], "match_end": ["winner"]
 }
 const PRIVATE_EVENTS := ["card_result", "card_rejected", "card_recovered", "order_accepted", "order_rejected", "order_status", "order_stopped", "order_completed", "natural_state", "ecology_changed", "ecology_rejected", "special_rejected", "move_rejected"]
 const CARD_STATS := {
@@ -149,6 +149,40 @@ func get_dominion_percent(player: int) -> float:
 func register_terrain_footprint(cells: Array, kind: String, author: int = -1) -> int:
 	return territory.register_footprint(cells, kind, author)
 
+func set_species_can_conquer(kind: String, enabled: bool = true) -> void:
+	territory.set_species_can_conquer(kind, enabled)
+
+func set_unit_can_conquer(unit_id: int, enabled: bool = true) -> void:
+	territory.set_unit_can_conquer(unit_id, enabled)
+
+func can_unit_conquer(unit: Dictionary) -> bool:
+	return territory.can_unit_conquer(unit)
+
+func set_defender_coverage(defender_id: int, cells: Array) -> void:
+	territory.set_defender_coverage(defender_id, cells)
+
+func clear_defender_coverage(defender_id: int) -> void:
+	territory.clear_defender_coverage(defender_id)
+
+func set_section_protected(owner: int, cell: Vector2i, protected: bool = true) -> void:
+	territory.set_section_protected(owner, cell, protected)
+
+func is_section_protected_against(cell: Vector2i, attacker_owner: int) -> bool:
+	return territory.is_section_protected_against(cell, attacker_owner, units, cards.buildings)
+
+func queue_conquer(player: int, unit_id: int, cell: Vector2i) -> void:
+	queue_act_at(player, unit_id, "conquer", cell)
+
+func get_conquest_progress(unit_id: int) -> Dictionary:
+	var action: Dictionary = actions.active.get(unit_id, {})
+	if action.get("kind", "") != "conquer":
+		return {"active": false, "unit_id": unit_id, "cell": Vector2i(-1, -1), "elapsed_ticks": 0, "remaining_ticks": 0, "total_ticks": territory.conquest_ticks}
+	var start: int = int(action["start_tick"])
+	var end: int = int(action["end_tick"])
+	var total := maxi(1, end - start)
+	var elapsed := clampi(tick_count - start, 0, total)
+	return {"active": true, "unit_id": unit_id, "cell": action["cell"], "elapsed_ticks": elapsed, "remaining_ticks": maxi(0, end - tick_count), "total_ticks": total}
+
 func queue_attack(attacker_id: int, defender_id: int) -> void:
 	if not finished:
 		queued_commands.append({"type": "attack", "attacker": attacker_id, "defender": defender_id})
@@ -181,9 +215,11 @@ func get_context_actions(player: int, unit_id: int, cell: Vector2i, target_id: i
 	var unit := get_unit(unit_id)
 	if unit.is_empty() or unit["owner"] != player:
 		return result
-	var labels := {"roll": "Ir a revolcarse", "forage": "Ir a comer", "enter": "Ir al refugio", "leave": "Salir del refugio", "charge": "Preparar embestida", "demolish": "Ir a demoler"}
+	var labels := {"roll": "Ir a revolcarse", "forage": "Ir a comer", "enter": "Ir al refugio", "leave": "Salir del refugio", "charge": "Preparar embestida", "demolish": "Ir a demoler", "conquer": "Ir a conquistar"}
 	var species_action: String = {"pig": "roll", "horse": "forage", "boar": "charge", "golem": "demolish"}.get(unit["kind"], "")
 	var choices: Array = [species_action, "leave" if unit.get("sheltered", false) and cell == unit["cell"] else "enter"]
+	if can_unit_conquer(unit):
+		choices.append("conquer")
 	for kind in choices:
 		if kind.is_empty():
 			continue
@@ -444,6 +480,8 @@ func step() -> void:
 		unit["hp"] = int(unit["hp"]) - damage
 		if damage > 0:
 			events.append({"type": "damaged", "unit_id": unit["id"], "amount": damage, "cell": unit["cell"]})
+			if int(unit["hp"]) > 0 and territory.interrupt_conquest_on_damage and actions.active.get(unit["id"], {}).get("kind", "") == "conquer":
+				actions.interrupt(int(unit["id"]), self)
 	for i in range(2):
 		players[i]["core_hp"] = maxi(0, int(players[i]["core_hp"]) - core_damage[i])
 	cards.apply_damage(unit_damage, self)
@@ -456,6 +494,7 @@ func step() -> void:
 			var ready := tick_count + int(CARD_STATS[kind]["recovery"])
 			players[owner]["recovering"][unit["id"]] = {"kind": kind, "copy_id": unit.get("copy_id", -1), "ready_tick": ready}
 			cards.defeated(unit, ready)
+			territory.clear_unit_state(int(unit["id"]))
 			events.append({"type": "defeated", "unit_id": unit["id"], "kind": kind, "cell": unit["cell"]})
 		else:
 			survivors.append(unit)

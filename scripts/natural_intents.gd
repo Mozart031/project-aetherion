@@ -115,7 +115,7 @@ func _resource(unit: Dictionary, kind: String, sim) -> Vector2i:
 	for cell in cells:
 		if sim.terrain.cells[cell] != kind or (0 if cell.x < 4 else 1) != half:
 			continue
-		if kind == "cornfield" and sim.cards.terrain_owners.get(cell, -1) not in [-1, unit["owner"]]:
+		if kind == "cornfield" and (sim.cards.terrain_owners.get(cell, -1) not in [-1, unit["owner"]] or sim.is_section_protected_against(cell, int(unit["owner"]))):
 			continue
 		if claims.has(cell) and claims[cell]["unit_id"] != unit["id"]:
 			continue

@@ -8,11 +8,18 @@ const HEIGHT := 4
 const TOTAL_SECTIONS := WIDTH * HEIGHT
 const INITIAL_SECTIONS_PER_PLAYER := 16
 const PERCENT_PER_SECTION := 3.125
+const CONQUEST_TICKS := 60
 
 var section_controllers: Dictionary = {}
 var footprints: Dictionary = {}
 var section_footprint: Dictionary = {}
 var next_footprint_id_by_bucket: Dictionary = {}
+var conquest_ticks := CONQUEST_TICKS
+var interrupt_conquest_on_damage := true
+var conquering_species: Dictionary = {}
+var conquering_units: Dictionary = {}
+var defender_coverage: Dictionary = {}
+var protected_sections_by_player: Dictionary = {0: {}, 1: {}}
 
 func _init() -> void:
 	reset()
@@ -22,6 +29,12 @@ func reset() -> void:
 	footprints.clear()
 	section_footprint.clear()
 	next_footprint_id_by_bucket = {-1: 1, 0: 1001, 1: 2001}
+	conquest_ticks = CONQUEST_TICKS
+	interrupt_conquest_on_damage = true
+	conquering_species.clear()
+	conquering_units.clear()
+	defender_coverage.clear()
+	protected_sections_by_player = {0: {}, 1: {}}
 	for x in range(WIDTH):
 		var initial_owner := 0 if x < 4 else 1
 		for y in range(HEIGHT):
@@ -254,3 +267,71 @@ func view_for(observer: int, hide_enemy_footprints: bool = false) -> Dictionary:
 		"percentages": summary["percentages"].duplicate(),
 		"footprints": projected_footprints
 	}
+
+func set_species_can_conquer(kind: String, enabled: bool = true) -> void:
+	if kind.is_empty():
+		return
+	if enabled:
+		conquering_species[kind] = true
+	else:
+		conquering_species.erase(kind)
+
+func set_unit_can_conquer(unit_id: int, enabled: bool = true) -> void:
+	if unit_id <= 0:
+		return
+	conquering_units[unit_id] = enabled
+
+func clear_unit_state(unit_id: int) -> void:
+	conquering_units.erase(unit_id)
+	defender_coverage.erase(unit_id)
+
+func can_unit_conquer(unit: Dictionary) -> bool:
+	if unit.is_empty():
+		return false
+	var id := int(unit.get("id", -1))
+	if conquering_units.has(id):
+		return bool(conquering_units[id])
+	return bool(conquering_species.get(str(unit.get("kind", "")), false))
+
+func set_defender_coverage(defender_id: int, cells: Array) -> void:
+	if defender_id <= 0:
+		return
+	var valid_cells: Array[Vector2i] = []
+	for entry in cells:
+		if entry is Vector2i and is_valid_section(entry) and entry not in valid_cells:
+			valid_cells.append(entry)
+	if valid_cells.is_empty():
+		defender_coverage.erase(defender_id)
+	else:
+		defender_coverage[defender_id] = valid_cells
+
+func clear_defender_coverage(defender_id: int) -> void:
+	defender_coverage.erase(defender_id)
+
+func set_section_protected(owner: int, cell: Vector2i, protected: bool = true) -> void:
+	if owner not in [0, 1] or not is_valid_section(cell):
+		return
+	if protected:
+		protected_sections_by_player[owner][cell] = true
+	else:
+		protected_sections_by_player[owner].erase(cell)
+
+func is_section_protected_against(cell: Vector2i, attacker_owner: int, units: Array = [], buildings: Array = []) -> bool:
+	if attacker_owner not in [0, 1] or not is_valid_section(cell):
+		return false
+	var defender_owner := 1 - attacker_owner
+	if get_controller(cell) != defender_owner:
+		return false
+	if protected_sections_by_player[defender_owner].get(cell, false):
+		return true
+	for unit in units:
+		if int(unit.get("owner", -1)) == defender_owner and int(unit.get("hp", 0)) > 0 and not unit.get("sheltered", false):
+			var uid := int(unit["id"])
+			if defender_coverage.has(uid) and cell in defender_coverage[uid]:
+				return true
+	for building in buildings:
+		if int(building.get("owner", -1)) == defender_owner and int(building.get("hp", 0)) > 0:
+			var bid := int(building["id"])
+			if defender_coverage.has(bid) and cell in defender_coverage[bid]:
+				return true
+	return false

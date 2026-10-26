@@ -23,7 +23,7 @@ func consume(view: Dictionary) -> void:
 	effects = effects.filter(func(effect): return int(effect["expires"]) > tick)
 	for event in view["events"]:
 		var type: String = event["type"]
-		if type not in ["attack_accepted", "damaged", "building_damaged", "defeated", "building_defeated", "special_started", "special_completed", "special_cancelled", "card_played", "card_recovered", "board_joined"]:
+		if type not in ["attack_accepted", "damaged", "building_damaged", "defeated", "building_defeated", "special_started", "special_completed", "special_cancelled", "card_played", "card_recovered", "board_joined", "section_conquered"]:
 			continue
 		var effect: Dictionary = event.duplicate(true)
 		effect["tick"] = tick
@@ -64,6 +64,7 @@ func pose(unit: Dictionary, tick_time: float, observer: int, motion: Dictionary,
 			"demolish": scale = Vector2(1 - sin(progress * PI) * 0.12, 1 + sin(progress * PI) * 0.18)
 			"enter": scale *= 1 - progress * 0.25
 			"leave": scale *= 0.75 + progress * 0.25
+			"conquer": scale = Vector2(1 + sin(progress * PI * 6) * 0.06, 1 + cos(progress * PI * 6) * 0.06)
 	elif unit.get("sheltered", false):
 		scale *= 0.75
 	return {"offset": offset, "angle": angle, "scale": scale, "flash": flash}
