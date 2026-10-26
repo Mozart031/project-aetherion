@@ -78,7 +78,7 @@ func ingest(commands: Array, sim) -> void:
 		if not valid:
 			sim.events.append({"type": "order_rejected", "unit_id": id, "player": unit["owner"], "reason": "invalid_goal"})
 			continue
-		if active.has(id) and active[id]["goal"] == goal:
+		if active.has(id) and active[id]["goal"] == goal and (not active[id].get("action_started", false) or sim.actions.active.has(id)):
 			continue
 		sim.actions.interrupt(id, sim)
 		sim.natural.cancel(id, sim)
