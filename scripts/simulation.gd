@@ -11,6 +11,7 @@ const ContextActions = preload("res://scripts/context_actions.gd")
 const BattleCards = preload("res://scripts/battle_cards.gd")
 const NaturalIntents = preload("res://scripts/natural_intents.gd")
 const MatchLoadout = preload("res://scripts/match_loadout.gd")
+const TerritoryControl = preload("res://scripts/territory_control.gd")
 const WIDTH := 8
 const HEIGHT := 4
 const TICK_RATE := 20
@@ -64,6 +65,7 @@ var actions := ContextActions.new()
 var cards := BattleCards.new()
 var natural := NaturalIntents.new()
 var loadouts := [MatchLoadout.new(), MatchLoadout.new()]
+var territory := TerritoryControl.new()
 
 func _init() -> void:
 	reset()
@@ -81,6 +83,7 @@ func reset() -> void:
 	terrain.reset()
 	actions.reset()
 	natural.reset()
+	territory.reset()
 	players = [
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(1, 1), "core_known_to": [true, false], "recovering": {}},
 		{"essence": 4, "core_hp": CORE_MAX_HP, "core_cell": Vector2i(6, 2), "core_known_to": [false, true], "recovering": {}}
@@ -103,7 +106,25 @@ func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
 		queued_commands.append({"type": "summon", "player": player, "kind": kind, "cell": cell})
 
 func place_terrain(cell: Vector2i, kind: String) -> bool:
-	return tick_count == 0 and terrain.place(cell, kind)
+	if tick_count != 0 or not terrain.place(cell, kind):
+		return false
+	territory.register_footprint([cell], kind, -1)
+	return true
+
+func get_section_controller(cell: Vector2i) -> int:
+	return territory.get_controller(cell)
+
+func set_section_controller(cell: Vector2i, new_owner: int) -> Dictionary:
+	return territory.set_controller(cell, new_owner)
+
+func get_controlled_section_count(player: int) -> int:
+	return territory.controlled_count(player)
+
+func get_dominion_percent(player: int) -> float:
+	return territory.dominion_percent(player)
+
+func register_terrain_footprint(cells: Array, kind: String, author: int = -1) -> int:
+	return territory.register_footprint(cells, kind, author)
 
 func queue_attack(attacker_id: int, defender_id: int) -> void:
 	if not finished:
@@ -287,7 +308,7 @@ func get_player_view(observer: int) -> Dictionary:
 		var projected := _event_for(event, observer)
 		if not projected.is_empty():
 			observed_events.append(projected)
-	return {"tick": tick_count, "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "terrain_owners": visible_terrain_owners, "events": observed_events, "finished": finished, "winner": winner}
+	return {"tick": tick_count, "players": visible_players, "units": visible_units, "buildings": visible_buildings, "cards": card_states, "loadout": loadouts[observer].snapshot(), "motions": visible_motions, "actions": visible_actions, "orders": orders.view_for(observer, units), "natural": natural.view_for(observer, units), "terrain": terrain.cells.duplicate(true), "terrain_owners": visible_terrain_owners, "territory": territory.view_for(observer), "events": observed_events, "finished": finished, "winner": winner}
 
 func queue_core_attack(attacker_id: int, defending_player: int) -> void:
 	if not finished:

@@ -188,6 +188,7 @@ func play(command: Dictionary, sim, commands: Array) -> void:
 		# Normal replacement returns the previous terrain card immediately.
 		sim.terrain.cells[cell] = kind
 		terrain_owners[cell] = player
+		sim.territory.register_footprint([cell], kind, player)
 		sim.players[player]["essence"] -= int(data["cost"])
 	elif category == "construction":
 		buildings.append({"id": next_building_id, "kind": kind, "owner": player, "cell": cell, "hp": 4, "max_hp": 4})
