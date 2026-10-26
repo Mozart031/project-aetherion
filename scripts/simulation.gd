@@ -21,6 +21,8 @@ const ESSENCE_REGEN_TICKS := 60
 const CORE_MAX_HP := 12
 const MATCH_LIMIT_TICKS := 12000
 const PREPARATION_TICKS := 600
+const TERRITORIAL_VICTORY_SECTIONS := 29
+const TERRITORIAL_VICTORY_TICKS := 300
 ## Observer contract: unknown events/fields are never public by default.
 const PUBLIC_EVENTS := {
 	"summoned": ["unit_id", "kind", "owner"],
@@ -70,6 +72,9 @@ var territory := TerritoryControl.new()
 var preparation_enabled := false
 var preparation_ticks := PREPARATION_TICKS
 var match_phase := "combat"
+## Legacy demos keep their existing core/timeout policy unless explicitly enabled.
+var territorial_victory_enabled := false
+var _territorial_hold_ticks: Array[int] = [0, 0]
 
 func _init() -> void:
 	reset()
@@ -79,6 +84,7 @@ func reset() -> void:
 	next_unit_id = 1
 	finished = false
 	winner = -1
+	_territorial_hold_ticks = [0, 0]
 	units.clear()
 	queued_commands.clear()
 	events.clear()
@@ -123,6 +129,22 @@ func is_preparation_phase(at_tick: int = -1) -> bool:
 
 func preparation_remaining_ticks() -> int:
 	return maxi(0, preparation_ticks - tick_count) if is_preparation_phase() else 0
+
+func enable_territorial_victory(enabled: bool = true) -> bool:
+	if tick_count != 0:
+		return false
+	territorial_victory_enabled = enabled
+	_territorial_hold_ticks = [0, 0]
+	return true
+
+## Read-only progress; queries never advance the simulation or expose private state.
+func get_territorial_victory_progress() -> Dictionary:
+	return {
+		"enabled": territorial_victory_enabled,
+		"required_sections": TERRITORIAL_VICTORY_SECTIONS,
+		"required_ticks": TERRITORIAL_VICTORY_TICKS,
+		"held_ticks": _territorial_hold_ticks.duplicate()
+	}
 
 func queue_summon(player: int, kind: String, cell: Vector2i) -> void:
 	if not finished:
@@ -390,6 +412,7 @@ func get_unit(unit_id: int) -> Dictionary:
 func step() -> void:
 	if finished:
 		return
+	var territorial_counts_before_tick: Array = territory.dominion_summary()["counts"] if territorial_victory_enabled else []
 	tick_count += 1
 	events.clear()
 	if tick_count % ESSENCE_REGEN_TICKS == 0:
@@ -504,7 +527,7 @@ func step() -> void:
 	natural.cleanup(self)
 	# Accepted attacks use the origin and apply damage before any arrival.
 	events.append_array(movement.advance(units, tick_count))
-	_check_end()
+	_check_end(territorial_counts_before_tick)
 	if finished:
 		movement.reset()
 		orders.reset()
@@ -572,10 +595,32 @@ func _in_combat_position(attacker: Dictionary, defender: Dictionary, demolition:
 func _can_attack(attacker: Dictionary, defender: Dictionary, demolition: bool = false, at_tick: int = -1) -> bool:
 	return _in_combat_position(attacker, defender, demolition) and (tick_count if at_tick < 0 else at_tick) >= int(attacker["ready_tick"])
 
-func _check_end() -> void:
+func _check_end(territorial_counts_before_tick: Array) -> void:
+	if territorial_victory_enabled:
+		_check_territorial_end(territorial_counts_before_tick)
+		return
 	var a: int = int(players[0]["core_hp"])
 	var b: int = int(players[1]["core_hp"])
 	if a == 0 or b == 0 or tick_count >= MATCH_LIMIT_TICKS:
 		finished = true
 		winner = 0 if a > b else (1 if b > a else -1)
+		events.append({"type": "match_end", "winner": winner})
+
+func _check_territorial_end(counts_before_tick: Array) -> void:
+	if is_preparation_phase():
+		return
+	# Called once after all damage, conquests and arrivals of the fixed tick.
+	# A capture at this tick's end starts the hold; it cannot count a full tick yet.
+	# A 32-section board cannot give both players the 29-section threshold.
+	var counts: Array = territory.dominion_summary()["counts"]
+	for player in range(2):
+		var held_full_tick: bool = int(counts_before_tick[player]) >= TERRITORIAL_VICTORY_SECTIONS and int(counts[player]) >= TERRITORIAL_VICTORY_SECTIONS
+		_territorial_hold_ticks[player] = _territorial_hold_ticks[player] + 1 if held_full_tick else 0
+	var territorial_winner := -1
+	for player in range(2):
+		if _territorial_hold_ticks[player] >= TERRITORIAL_VICTORY_TICKS:
+			territorial_winner = player
+	if territorial_winner != -1:
+		finished = true
+		winner = territorial_winner
 		events.append({"type": "match_end", "winner": winner})
